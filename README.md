@@ -10,6 +10,13 @@ Consists of three main components:
 # Installation
 To install run `python setup.py install`, which will install the `centrex_TlF` package.
 
+Dependencies are:
+* tqdm
+* scipy
+* numpy
+* sympy
+* multiprocessing
+
 # Description
 
 ## `states`
@@ -21,12 +28,12 @@ Finally `State` is a class representing a collection of states, since in most ca
 The states can be initialized manually, using 
 ```Python
 import centrex_TlF as centrex
-centrex.CoupledBasisState(F=1, mF=0, F1 = 1/2, I1 = 1/2, I2 = 1/2, Omega = 0, P = 1)`
+centrex.CoupledBasisState(F=1, mF=0, F1 = 1/2, I1 = 1/2, I2 = 1/2, Omega = 0, P = 1)
 ```
 or using some of the functions to generate all hyperfine substates in a given J level: 
 ```Python
 import centrex_TlF as centrex
-centrex.generate_uncoupled_states_ground(Js = [0,1])
+centrex.states.generate_uncoupled_states_ground(Js = [0,1])
 ```
 
 ## `hamiltonian`
