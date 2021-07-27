@@ -21,23 +21,23 @@ def Hrot_X(psi):
 ### Terms with angular momentum dot products
 ########################################################
 
-def Hc1(psi):
-    return cst_X.c1 * ( com(I1z,Jz,psi) + (1/2)*(com(I1p,Jm,psi)+com(I1m,Jp,psi)) )
+def Hc1(psi, c1 = cst_X.c1):
+    return c1 * ( com(I1z,Jz,psi) + (1/2)*(com(I1p,Jm,psi)+com(I1m,Jp,psi)) )
 
-def Hc2(psi):
-    return cst_X.c2 * ( com(I2z,Jz,psi) + (1/2)*(com(I2p,Jm,psi)+com(I2m,Jp,psi)) )
+def Hc2(psi, c2 = cst_X.c2):
+    return c2 * ( com(I2z,Jz,psi) + (1/2)*(com(I2p,Jm,psi)+com(I2m,Jp,psi)) )
 
-def Hc4(psi):
-    return cst_X.c4 * ( com(I1z,I2z,psi) + (1/2)*(com(I1p,I2m,psi)+com(I1m,I2p,psi)) )
+def Hc4(psi, c4 = cst_X.c4):
+    return c4 * ( com(I1z,I2z,psi) + (1/2)*(com(I1p,I2m,psi)+com(I1m,I2p,psi)) )
 
-def Hc3a(psi):
-    return 15*cst_X.c3/cst_X.c1/cst_X.c2 * com(Hc1,Hc2,psi) / ((2*psi.J+3)*(2*psi.J-1))
+def Hc3a(psi, c1 = cst_X.c1, c2 = cst_X.c2, c3 = cst_X.c3):
+    return 15*c3/c1/c2 * com(Hc1,Hc2,psi) / ((2*psi.J+3)*(2*psi.J-1))
 
-def Hc3b(psi):
-    return 15*cst_X.c3/cst_X.c1/cst_X.c2 * com(Hc2,Hc1,psi) / ((2*psi.J+3)*(2*psi.J-1))
+def Hc3b(psi, c1 = cst_X.c1, c2 = cst_X.c2, c3 = cst_X.c3):
+    return 15*c3/c2/c1 * com(Hc2,Hc1,psi) / ((2*psi.J+3)*(2*psi.J-1))
 
-def Hc3c(psi):
-    return -10*cst_X.c3/cst_X.c4/cst_X.B_rot_X * com(Hc4,Hrot_X,psi) / ((2*psi.J+3)*(2*psi.J-1))
+def Hc3c(psi, c3 = cst_X.c3, c4 = cst_X.c4, B_rot = cst_X.B_rot_X):
+    return -10*c3/c4/B_rot * com(Hc4,Hrot_X,psi) / ((2*psi.J+3)*(2*psi.J-1))
 
 def Hc3(psi):
      return Hc3a(psi) + Hc3b(psi) + Hc3c(psi)
@@ -239,23 +239,23 @@ def H_mhf_F(psi):
 ### Zeeman X state
 ########################################################
 
-def HZx_X(psi):
+def HZx_X(psi, μ_J = cst_X.μ_J, μ_Tl = cst_X.μ_Tl, μ_F = cst_X.μ_F):
     if psi.J != 0:
-        return -cst_X.μ_J/psi.J*Jx(psi) - cst_X.μ_Tl/psi.I1*I1x(psi) - cst_X.μ_F/psi.I2*I2x(psi)
+        return -μ_J/psi.J*Jx(psi) - μ_Tl/psi.I1*I1x(psi) - μ_F/psi.I2*I2x(psi)
     else:
-        return -cst_X.μ_Tl/psi.I1*I1x(psi) - cst_X.μ_F/psi.I2*I2x(psi)
+        return -μ_Tl/psi.I1*I1x(psi) - μ_F/psi.I2*I2x(psi)
 
-def HZy_X(psi):
+def HZy_X(psi, μ_J = cst_X.μ_J, μ_Tl = cst_X.μ_Tl, μ_F = cst_X.μ_F):
     if psi.J != 0:
-        return -cst_X.μ_J/psi.J*Jy(psi) - cst_X.μ_Tl/psi.I1*I1y(psi) - cst_X.μ_F/psi.I2*I2y(psi)
+        return -μ_J/psi.J*Jy(psi) - μ_Tl/psi.I1*I1y(psi) - μ_F/psi.I2*I2y(psi)
     else:
-        return -cst_X.μ_Tl/psi.I1*I1y(psi) - cst_X.μ_F/psi.I2*I2y(psi)
+        return -μ_Tl/psi.I1*I1y(psi) - μ_F/psi.I2*I2y(psi)
     
-def HZz_X(psi):
+def HZz_X(psi, μ_J = cst_X.μ_J, μ_Tl = cst_X.μ_Tl, μ_F = cst_X.μ_F):
     if psi.J != 0:
-        return -cst_X.μ_J/psi.J*Jz(psi) - cst_X.μ_Tl/psi.I1*I1z(psi) - cst_X.μ_F/psi.I2*I2z(psi)
+        return -μ_J/psi.J*Jz(psi) - μ_Tl/psi.I1*I1z(psi) - μ_F/psi.I2*I2z(psi)
     else:
-        return -cst_X.μ_Tl/psi.I1*I1z(psi) - cst_X.μ_F/psi.I2*I2z(psi)
+        return -μ_Tl/psi.I1*I1z(psi) - μ_F/psi.I2*I2z(psi)
 
 ########################################################
 ### Zeeman B state Hamiltonian
@@ -317,14 +317,14 @@ def HZz_B(psi):
 ### Stark Hamiltonian
 ########################################################
 
-def HSx(psi):
-    return -cst_X.D_TlF * ( R1m(psi) - R1p(psi) ) / np.sqrt(2)
+def HSx(psi, D_TlF = cst_X.D_TlF):
+    return -D_TlF * ( R1m(psi) - R1p(psi) ) / np.sqrt(2)
 
-def HSy(psi):
-    return -cst_X.D_TlF * 1j * ( R1m(psi) + R1p(psi) ) / np.sqrt(2)
+def HSy(psi, D_TlF = cst_X.D_TlF):
+    return -D_TlF * 1j * ( R1m(psi) + R1p(psi) ) / np.sqrt(2)
 
-def HSz(psi):
-    return -cst_X.D_TlF*R10(psi)
+def HSz(psi, D_TlF = cst_X.D_TlF):
+    return -D_TlF*R10(psi)
 
 # Old functions from Jakobs original Hamiltonian
 
@@ -367,8 +367,8 @@ def HI1R(psi):
 def HI2R(psi):
     return com(I2z,R10,psi) + (com(I2p,R1m,psi)-com(I2m,R1p,psi))/np.sqrt(2)
 
-def Hc3_alt(psi):
-    return 5*cst_X.c3/cst_X.c4*Hc4(psi) - 15*cst_X.c3/2*(com(HI1R,HI2R,psi)+com(HI2R,HI1R,psi))
+def Hc3_alt(psi, c3 = cst_X.c3, c4 = cst_X.c4):
+    return 5*c3/c4*Hc4(psi) - 15*c3/2*(com(HI1R,HI2R,psi)+com(HI2R,HI1R,psi))
 
 def Hff_X_alt(psi):
     return Hrot_X(psi) + Hc1(psi) + Hc2(psi) + Hc3_alt(psi) + Hc4(psi)
