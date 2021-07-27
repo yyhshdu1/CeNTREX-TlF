@@ -402,9 +402,9 @@ class State:
         ordered = self.order_by_amp()
         idx = 0
         string = ""
+        amp_max = np.max(np.abs(list(zip(*ordered))[0]))
         for amp, state in ordered:
-            amp = np.abs(amp)
-            if amp < 0.1:
+            if np.abs(amp) < amp_max*1e-2:
                 continue
             string += f"{amp:.2f} x {state}"
             idx += 1
