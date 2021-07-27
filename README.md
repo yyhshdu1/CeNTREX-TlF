@@ -28,12 +28,41 @@ Finally `State` is a class representing a collection of states, since in most ca
 The states can be initialized manually, using 
 ```Python
 import centrex_TlF as centrex
-centrex.CoupledBasisState(F=1, mF=0, F1 = 1/2, I1 = 1/2, I2 = 1/2, Omega = 0, P = 1)
+centrex.CoupledBasisState(F=1, mF=0, F1 = 1/2, J = 0, I1 = 1/2, I2 = 1/2, Omega = 0, P = 1)
 ```
 or using some of the functions to generate all hyperfine substates in a given J level: 
 ```Python
 import centrex_TlF as centrex
-centrex.states.generate_uncoupled_states_ground(Js = [0,1])
+QN = centrex.states.generate_uncoupled_states_ground(Js = [0,1])
+```
+which returns an array containing the UncoupledBasisStates
+```python
+array([|X, J = 0, mJ = 0, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = -1/2, P = +, Ω = 0>,
+       |X, J = 0, mJ = 0, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = 1/2, P = +, Ω = 0>,
+       |X, J = 0, mJ = 0, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = -1/2, P = +, Ω = 0>,
+       |X, J = 0, mJ = 0, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = 1/2, P = +, Ω = 0>,
+       |X, J = 1, mJ = -1, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = -1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = -1, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = 1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = -1, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = -1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = -1, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = 1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 0, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = -1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 0, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = 1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 0, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = -1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 0, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = 1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 1, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = -1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 1, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = 1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 1, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = -1/2, P = -, Ω = 0>,
+       |X, J = 1, mJ = 1, I₁ = 1/2, m₁ = 1/2, I₂ = 1/2, m₂ = 1/2, P = -, Ω = 0>],
+      dtype=object)
+```
+State objects, which are superpositions of BasisStates are also generated easily:
+```Python
+superposition = 1*QN[0] + 0.1j*QN[1]
+```
+which returns
+```Python
+1.00 x |X, J = 0, mJ = 0, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = -1/2, P = +, Ω = 0>
+0.00+0.10j x |X, J = 0, mJ = 0, I₁ = 1/2, m₁ = -1/2, I₂ = 1/2, m₂ = 1/2, P = +, Ω = 0>
 ```
 
 ## `hamiltonian`
@@ -51,9 +80,10 @@ H = centrex.hamiltonian.generate_uncoupled_hamiltonian_X(QN)
 # create a function outputting the hamiltonian as a function of E and B
 Hfunc = centrex.hamiltonian.generate_uncoupled_hamiltonian_X_function(H)
 ```
-All functions generating hamiltonians only require a list or array of TlF states. Generating the hamiltonian only for certain hyperfine sublevels is hence also straightforward.
+All functions generating hamiltonians only require a list or array of TlF states. Generating the hamiltonian only for certain hyperfine sublevels is hence also straightforward. The function `calculate_uncoupled_hamiltonian_X` calculates the hamiltonians from scratch, whereas `generate_uncoupled_hamiltonian_X` pulls the non-zero elements from an sqlite database.
 
-To convert a hamiltonian from one basis to another transformation matrices can be calculated:
+To convert a hamiltonian from one basis to another transformation matrices can be generated or calculated
+(`generate_transform_matrix` pulls non-zero matrix elements from an sqlite database, `calculate_transform_matrix` does the full element wise calculation):
 ```Python
 import centrex_TlF as centrex
 
