@@ -1,14 +1,20 @@
 import numpy as np
 from tqdm import tqdm
+from pathlib import Path
+
 from centrex_TlF.hamiltonian.hamiltonian_terms_uncoupled import (
     Hff_X, HSx, HSy, HSz, HZx_X, HZy_X, HZz_X, Hff_X_alt
 )
 from centrex_TlF.hamiltonian.hamiltonian_B_terms_coupled import (
     Hrot_B, H_mhf_Tl, H_mhf_F, H_LD, H_cp1_Tl, H_c_Tl, HZz_B
 )
+from centrex_TlF.hamiltonian.utils_sqlite import (
+    retrieve_uncoupled_hamiltonian_X_sqlite
+)
 
 __all__ = [
-    'generate_uncoupled_hamiltonian_X', 'generate_coupled_hamiltonian_B'
+    'generate_uncoupled_hamiltonian_X', 'generate_coupled_hamiltonian_B',
+    'calculate_uncoupled_hamiltonian_X'
 ]
 
 def HMatElems(H, QN, progress = False):
@@ -23,6 +29,36 @@ def HMatElems(H, QN, progress = False):
     return result
 
 def generate_uncoupled_hamiltonian_X(QN):
+    """
+    Generate the uncoupled X state hamiltonian for the supplied set of 
+    basis states.
+    Retrieved from a pre-calculated sqlite3 database
+
+    Args:
+        QN (array): array of UncoupledBasisStates
+
+    Returns:
+        dict: dictionary with all X state hamiltonian terms
+    """
+    for qn in QN:
+        assert qn.isUncoupled, "supply list with UncoupledBasisStates"
+
+    path = Path(__file__).parent.parent / "pre_calculated"
+    db = path / "uncoupled_hamiltonian_X.db"
+
+    return retrieve_uncoupled_hamiltonian_X_sqlite(QN, db) 
+    
+def calculate_uncoupled_hamiltonian_X(QN):
+    """Calculate the uncoupled X state hamiltonian for the supplies set of 
+    basis states.
+    Calculated directly from supplied basis states
+
+    Args:
+        QN (array): array of UncoupledBasisStates
+
+    Returns:
+        dict: dictionary with all X state hamiltonian terms
+    """
     for qn in QN:
         assert qn.isUncoupled, "supply list with UncoupledBasisStates"
     return {
