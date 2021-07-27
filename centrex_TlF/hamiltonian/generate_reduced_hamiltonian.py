@@ -36,7 +36,7 @@ def generate_diagonalized_hamiltonian(hamiltonian, keep_order = True,
 def generate_reduced_X_hamiltonian(ground_states_approx, Jmin = 0, Jmax = 4, 
                                     E = np.array([0,0,0]),
                                     B = np.array([0,0,0.001]),
-                                    rtol = 1e-14):
+                                    rtol = None):
 
     QN = states.generate_uncoupled_states_ground(list(range(Jmin,Jmax+1)))
     QNc = states.generate_coupled_states_ground(list(range(Jmin,Jmax+1)))
@@ -56,8 +56,10 @@ def generate_reduced_X_hamiltonian(ground_states_approx, Jmin = 0, Jmax = 4,
     # new set of quantum numbers:
     QN_diag = matrix_to_states(V, QNc)
 
-    ground_states = states.find_exact_states([1*gs for gs in ground_states_approx], 
-                                        H_X_diag, QN_diag, V_ref = V_ref)
+    ground_states = states.find_exact_states(
+                                    [1*gs for gs in ground_states_approx], 
+                                    H_X_diag, QN_diag, V_ref = V_ref
+        )
 
     # ground_states = [gs.remove_small_components() for gs in ground_states]
 
