@@ -30,12 +30,8 @@ def generate_transform_matrix(basis1, basis2, progress = False):
 
     #Loop over the bases and calculate inner products
     for i, state1 in enumerate(tqdm(basis1, disable = not progress)):
-        for j in range(len(basis2)):
-            state2 = basis2[j]
-            val = state1@state2
-            S[i,j] = val
-            if i != j:
-                S[j,i] = np.conjugate(val) 
+        for j, state2 in enumerate(basis2):
+            S[i,j] = state1@state2
 
     #Return the transform matrix
     return S
