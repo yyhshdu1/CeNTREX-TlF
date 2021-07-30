@@ -1,8 +1,12 @@
 import numpy as np
 import centrex_TlF.constants.constants_B as cst_B
-from sympy.physics.wigner import wigner_3j, wigner_6j
 import centrex_TlF.hamiltonian.quantum_operators as qo
 from centrex_TlF.states.states import CoupledBasisState, State
+
+from centrex_TlF.hamiltonian.utils import (
+    threej_f, sixj_f
+)
+
 
 def Hrot_B(psi):        
     return cst_B.B_rot_B * qo.J2(psi) - cst_B.D_rot_B * qo.J4(psi) + \
@@ -26,7 +30,7 @@ def H_LD(psi):
     
     def ME(J,Jprime,Omega,Omegaprime):
         amp = (cst_B.q*(-1)**(J-Omegaprime)/(2*np.sqrt(6)) *
-                wigner_3j(J,2,J,-Omegaprime,Omegaprime-Omega, Omega) * 
+                threej_f(J,2,J,-Omegaprime,Omegaprime-Omega, Omega) * 
                 np.sqrt((2*J-1)*2*J*(2*J+1)*(2*J+2)*(2*J+3)) )
 
         return amp
@@ -75,8 +79,8 @@ def H_mhf_Tl(psi):
             #Calculate matrix element
             try:
                 amp = cst_B.h1_Tl*((-1)**(J+Jprime+F1+I1-Omega) 
-                       * wigner_6j(I1, Jprime, F1, J, I1, 1) 
-                       * wigner_3j(J, 1, Jprime, -Omega, 0, Omega)
+                       * sixj_f(I1, Jprime, F1, J, I1, 1) 
+                       * threej_f(J, 1, Jprime, -Omega, 0, Omega)
                        * np.sqrt((2*J+1)*(2*Jprime+1)*I1*(I1+1)*(2*I1+1)))
 
             except ValueError: 
@@ -122,9 +126,9 @@ def H_mhf_F(psi):
         for F1prime in np.arange(np.abs(Jprime-I1), Jprime+I1+1):
             try:
                 amp = cst_B.h1_F*((-1)**(2*F1prime+F+2*J+1+I1+I2-Omega) 
-                       * wigner_6j(I2, F1prime, F, F1, I2, 1)
-                       * wigner_6j(Jprime, F1prime, I1, F1, J, 1) 
-                       * wigner_3j(J, 1, Jprime,-Omega,0,Omega)
+                       * sixj_f(I2, F1prime, F, F1, I2, 1)
+                       * sixj_f(Jprime, F1prime, I1, F1, J, 1) 
+                       * threej_f(J, 1, Jprime,-Omega,0,Omega)
                        * np.sqrt((2*F1+1)*(2*F1prime+1)*(2*J+1)
                        * (2*Jprime+1)*I2*(I2+1)*(2*I2+1)))
 
@@ -168,7 +172,7 @@ def H_c_Tl(psi):
     data = []
     
     #Calculate matrix element
-    amp = cst_B.c_Tl*(-1)**(J+F1+I1)*wigner_6j(I1,J,F1,J,I1,1) * \
+    amp = cst_B.c_Tl*(-1)**(J+F1+I1)*sixj_f(I1,J,F1,J,I1,1) * \
                         np.sqrt(J*(J+1)*(2*J+1)*I1*(I1+1)*(2*I1+1))
 
     basis_state = CoupledBasisState(Fprime, mFprime, F1prime, Jprime, I1prime, 
@@ -216,11 +220,11 @@ def H_cp1_Tl(psi):
         q = Omegaprime
         amp = (-0.5*cst_B.c1p_Tl * (-1)**(-J+Jprime-Omegaprime+F1+I1) 
                 * np.sqrt((2*Jprime+1)*(2*J+1)*I1*(I1+1)*(2*I1+1))
-                * wigner_6j(I1, J, F1, Jprime, I1, 1)
-                * ((-1)**(J)*wigner_3j(Jprime,1,J,-Omegaprime,q,0)
-                * wigner_3j(J,1,J,0,q,Omega)*np.sqrt(J*(J+1)*(2*J+1))
-                + ((-1)**(Jprime)*wigner_3j(Jprime,1,Jprime,-Omegaprime,q,0)
-                * wigner_3j(Jprime,1,J,0,q,Omega)
+                * sixj_f(I1, J, F1, Jprime, I1, 1)
+                * ((-1)**(J)*threej_f(Jprime,1,J,-Omegaprime,q,0)
+                * threej_f(J,1,J,0,q,Omega)*np.sqrt(J*(J+1)*(2*J+1))
+                + ((-1)**(Jprime)*threej_f(Jprime,1,Jprime,-Omegaprime,q,0)
+                * threej_f(Jprime,1,J,0,q,Omega)
                 * np.sqrt(Jprime*(Jprime+1)*(2*Jprime+1)))
                 )
             )
