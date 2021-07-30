@@ -2,8 +2,9 @@ import numpy as np
 import multiprocessing
 from centrex_TlF.couplings.matrix_elements import ED_ME_mixed_state
 from centrex_TlF.couplings.utils_multiprocessing import multi_coupling_matrix
-from centrex_TlF.states.utils import find_exact_states, \
-                                        check_approx_state_exact_state
+from centrex_TlF.states.utils import (
+    find_exact_states, check_approx_state_exact_state
+)
 
 __all__ = [
     'calculate_coupling_matrix', 'generate_coupling_field', 'generate_D'
@@ -25,6 +26,8 @@ def calculate_coupling_matrix(QN, ground_states, excited_states,
     Returns:
         np.ndarray: optical coupling matrix
     """
+    assert isinstance(QN, list), "QN required to be of type list"
+
     if nprocs > 1:
         with multiprocessing.Pool(nprocs) as pool:
             result = pool.starmap(multi_coupling_matrix,
