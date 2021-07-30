@@ -33,16 +33,17 @@ def generate_diagonalized_hamiltonian(hamiltonian, keep_order = True,
     else:
         return hamiltonian_diagonalized, V, V_ref
 
-def generate_reduced_X_hamiltonian(ground_states_approx, Jmin = 0, Jmax = 4, 
+def generate_reduced_X_hamiltonian(ground_states_approx, 
                                     E = np.array([0,0,0]),
                                     B = np.array([0,0,0.001]),
                                     rtol = None):
 
-    QN = states.generate_uncoupled_states_ground(list(range(Jmin,Jmax+1)))
-    QNc = states.generate_coupled_states_ground(list(range(Jmin,Jmax+1)))
+    QN = states.generate_uncoupled_states_ground(
+        np.unique([gs.J for gs in ground_states_approx])
+    )
     H_X_uc = generate_uncoupled_hamiltonian_X(QN)
     H_X_uc = generate_uncoupled_hamiltonian_X_function(H_X_uc)
-    S_transform = generate_transform_matrix(QN, QNc)
+    S_transform = generate_transform_matrix(QN, ground_states_approx)
 
     H_X = S_transform.conj().T @ H_X_uc(E,B) @ S_transform
     if rtol:
@@ -54,7 +55,7 @@ def generate_reduced_X_hamiltonian(ground_states_approx, Jmin = 0, Jmax = 4,
         )
 
     # new set of quantum numbers:
-    QN_diag = matrix_to_states(V, QNc)
+    QN_diag = matrix_to_states(V, ground_states_approx)
 
     ground_states = states.find_exact_states(
                                     [1*gs for gs in ground_states_approx], 
@@ -70,10 +71,27 @@ def generate_reduced_X_hamiltonian(ground_states_approx, Jmin = 0, Jmax = 4,
 def generate_reduced_B_hamiltonian(excited_states_approx, 
                                     E = np.array([0,0,0]),
                                     B = np.array([0,0,0.001]),
-                                    rtol = 1e-14):
+                                    rtol = None,
+                                    Jmin = 1,
+                                    Jmax = 3):
+
+    # need to generate other states because excited states are mixed
+    Ps = [-1,1]
+    I_F = 1/2
+    I_Tl = 1/2
+    QN_B = [centrex_TlF.CoupledBasisState(
+                        F,mF,F1,J,I_F,I_Tl,P = P, Omega = 1, electronic_state='B'
+                        )
+            for J  in np.arange(Jmin, Jmax+1)
+            for F1 in np.arange(np.abs(J-I_F),J+I_F+1)
+            for F in np.arange(np.abs(F1-I_Tl),F1+I_Tl+1)
+            for mF in np.arange(-F, F+1)
+            for P in Ps
+        ]
+
     for qn in excited_states_approx:
         assert qn.isCoupled, "supply list of CoupledBasisStates"
-    H_B =  generate_coupled_hamiltonian_B(excited_states_approx)
+    H_B =  generate_coupled_hamiltonian_B(QN_B)
     H_B = generate_coupled_hamiltonian_B_function(H_B)
 
     H_B_diag, V, V_ref_B = generate_diagonalized_hamiltonian(H_B(E, B),
@@ -82,19 +100,10 @@ def generate_reduced_B_hamiltonian(excited_states_approx,
                                                             rtol = rtol)
 
     # new set of quantum numbers:
-    QN_B_diag = matrix_to_states(V, excited_states_approx)
+    QN_B_diag = matrix_to_states(V, QN_B)
 
     excited_states = centrex_TlF.states.find_exact_states([1*e for e in excited_states_approx], 
                                             H_B_diag, QN_B_diag, V_ref=V_ref_B)
 
     H_B_red = reduced_basis_hamiltonian(QN_B_diag, H_B_diag, excited_states)
     return excited_states, H_B_red
-
-def generate_total_hamiltonian(H_X_red, H_B_red, element_limit = 0.1):
-    H_X_red[np.abs(H_X_red) < element_limit] = 0
-    H_B_red[np.abs(H_B_red) < element_limit] = 0
-
-    H_int = scipy.linalg.block_diag(H_X_red, H_B_red)
-    V_ref_int = np.eye(H_int.shape[0])
-
-    return H_int, V_ref_int
