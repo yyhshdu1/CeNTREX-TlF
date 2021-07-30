@@ -18,7 +18,7 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
     tol = couplings smaller than tol/sqrt(gamma) are set to zero to speed up computation
 
     outputs:
-    C_list = list of collapse matrices
+    C_list = array of collapse matrices
     """
     #Initialize list of collapse matrices
     C_list = []
@@ -39,4 +39,4 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
 
                 C_list.append(H)
 
-    return C_list
+    return np.array(C_list)
