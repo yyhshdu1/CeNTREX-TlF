@@ -9,12 +9,13 @@ from centrex_TlF.hamiltonian.hamiltonian_B_terms_coupled import (
     Hrot_B, H_mhf_Tl, H_mhf_F, H_LD, H_cp1_Tl, H_c_Tl, HZz_B
 )
 from centrex_TlF.hamiltonian.utils_sqlite import (
-    retrieve_uncoupled_hamiltonian_X_sqlite
+    retrieve_uncoupled_hamiltonian_X_sqlite, 
+    retrieve_coupled_hamiltonian_B_sqlite
 )
 
 __all__ = [
     'generate_uncoupled_hamiltonian_X', 'generate_coupled_hamiltonian_B',
-    'calculate_uncoupled_hamiltonian_X'
+    'calculate_uncoupled_hamiltonian_X', 'calculate_coupled_hamiltonian_B'
 ]
 
 def HMatElems(H, QN, progress = False):
@@ -72,6 +73,25 @@ def calculate_uncoupled_hamiltonian_X(QN):
     }
 
 def generate_coupled_hamiltonian_B(QN):
+    """Calculate the coupled B state hamiltonian for the supplies set of 
+    basis states.
+    Retrieved from a pre-calculated sqlite3 database
+
+    Args:
+        QN (array): array of UncoupledBasisStates
+
+    Returns:
+        dict: dictionary with all B state hamiltonian terms
+    """
+    for qn in QN:
+        assert qn.isCoupled, "supply list withCoupledBasisStates"
+
+    path = Path(__file__).parent.parent / "pre_calculated"
+    db = path / "coupled_hamiltonian_B.db"
+
+    return retrieve_coupled_hamiltonian_B_sqlite(QN, db) 
+
+def calculate_coupled_hamiltonian_B(QN):
     for qn in QN:
         assert qn.isCoupled, "supply list withCoupledBasisStates"
     return {

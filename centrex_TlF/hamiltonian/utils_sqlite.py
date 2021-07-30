@@ -23,6 +23,28 @@ def retrieve_uncoupled_hamiltonian_X_sqlite(QN, db):
     con.close()
     return H
 
+def retrieve_coupled_hamiltonian_B_sqlite(QN, db):
+    con = sqlite3.connect(db)
+    H = {}
+    with con:
+        cur = con.cursor()
+        for term in ['Hrot', 'H_mhf_Tl', 'H_mhf_F', 'H_LD', 'H_cp1_Tl', 'H_c_Tl', 'HZz']:
+            result = np.zeros((len(QN),len(QN)), complex)
+            for i,a in enumerate(QN):
+                for j in range(i,len(QN)):
+                    b = QN[j]
+                    string = f"J₁ = {a.J} AND F1₁ = {a.F1} AND F₁ = {a.F} AND mF₁ = {a.mF} AND I1₁ = {a.I1} AND I2₁ = {a.I2} AND P₁ = {a.P} AND J₂ = {b.J} AND F1₂ = {b.F1} AND F₂ = {b.F} AND mF₂ = {b.mF} AND I1₂ = {b.I1} AND I2₂ = {b.I2} AND P₂ = {b.P}"
+                    cur.execute(f"select value_real, value_imag from {term} WHERE {string}")
+                    values = cur.fetchall()
+                    if values:
+                        values = values[0]
+                        result[i,j] = values[0] + 1j*values[1]
+                        if i != j:
+                            result[j,i] = np.conjugate(values[0] + 1j*values[1])
+            H[term] = result.copy()
+    con.close()
+    return H
+
 def retrieve_S_transform_uncoupled_to_coupled_sqlite(basis1, basis2, db):
     con = sqlite3.connect(db)
     cur = con.cursor()
