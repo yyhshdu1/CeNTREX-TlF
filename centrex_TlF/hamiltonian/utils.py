@@ -1,11 +1,20 @@
 import numpy as np
+import scipy.linalg
 from centrex_TlF.states.states import State
+from sympy.physics.wigner import wigner_3j, wigner_6j
 
 __all__ = [
     'reorder_evecs', 'generate_uncoupled_hamiltonian_X_function',
     'generate_coupled_hamiltonian_B_function', 'matrix_to_states', 
-    'reduced_basis_hamiltonian'
+    'reduced_basis_hamiltonian', 'generate_total_hamiltonian', 'threej_f',
+    'sixj_f'
 ]
+
+def threej_f(j1,j2,j3,m1,m2,m3):
+    return complex(wigner_3j(j1,j2,j3,m1,m2,m3))
+
+def sixj_f(j1,j2,j3,j4,j5,j6):
+    return complex(wigner_6j(j1,j2,j3,j4,j5,j6))
 
 def reorder_evecs(V_in,E_in,V_ref):
     """Reshuffle eigenvectors and eigenergies based on a reference
@@ -112,3 +121,12 @@ def reduced_basis_hamiltonian(basis_ori, H_ori, basis_red):
             H_red[i,j] = H_ori[index_red[i], index_red[j]]
 
     return H_red
+
+def generate_total_hamiltonian(H_X_red, H_B_red, element_limit = 0.1):
+    H_X_red[np.abs(H_X_red) < element_limit] = 0
+    H_B_red[np.abs(H_B_red) < element_limit] = 0
+
+    H_int = scipy.linalg.block_diag(H_X_red, H_B_red)
+    V_ref_int = np.eye(H_int.shape[0])
+
+    return H_int, V_ref_int
