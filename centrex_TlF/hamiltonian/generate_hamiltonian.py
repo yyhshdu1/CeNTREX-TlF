@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
@@ -10,7 +11,9 @@ from centrex_TlF.hamiltonian.hamiltonian_B_terms_coupled import (
 )
 from centrex_TlF.hamiltonian.utils_sqlite import (
     retrieve_uncoupled_hamiltonian_X_sqlite, 
-    retrieve_coupled_hamiltonian_B_sqlite
+    retrieve_coupled_hamiltonian_B_sqlite,
+    check_states_uncoupled_hamiltonian_X,
+    check_states_coupled_hamiltonian_B
 )
 
 __all__ = [
@@ -44,10 +47,18 @@ def generate_uncoupled_hamiltonian_X(QN):
     for qn in QN:
         assert qn.isUncoupled, "supply list with UncoupledBasisStates"
 
-    path = Path(__file__).parent.parent / "pre_calculated"
-    db = path / "uncoupled_hamiltonian_X.db"
+    pre_cached = check_states_uncoupled_hamiltonian_X(QN)
 
-    return retrieve_uncoupled_hamiltonian_X_sqlite(QN, db) 
+    if pre_cached:
+        path = Path(__file__).parent.parent / "pre_calculated"
+        db = path / "uncoupled_hamiltonian_X.db"
+
+        return retrieve_uncoupled_hamiltonian_X_sqlite(QN, db)
+    else:
+        logging.warning(
+            "X state Hamiltonian not pre-cached for supplied states, calculating"
+            )
+        return calculate_uncoupled_hamiltonian_X(QN)
     
 def calculate_uncoupled_hamiltonian_X(QN):
     """Calculate the uncoupled X state hamiltonian for the supplies set of 
@@ -62,6 +73,7 @@ def calculate_uncoupled_hamiltonian_X(QN):
     """
     for qn in QN:
         assert qn.isUncoupled, "supply list with UncoupledBasisStates"
+
     return {
             "Hff" :  HMatElems(Hff_X_alt, QN),
             "HSx" :  HMatElems(HSx, QN),
@@ -86,10 +98,18 @@ def generate_coupled_hamiltonian_B(QN):
     for qn in QN:
         assert qn.isCoupled, "supply list withCoupledBasisStates"
 
-    path = Path(__file__).parent.parent / "pre_calculated"
-    db = path / "coupled_hamiltonian_B.db"
+    pre_cached = check_states_coupled_hamiltonian_B(QN)
 
-    return retrieve_coupled_hamiltonian_B_sqlite(QN, db) 
+    if pre_cached:
+        path = Path(__file__).parent.parent / "pre_calculated"
+        db = path / "coupled_hamiltonian_B.db"
+
+        return retrieve_coupled_hamiltonian_B_sqlite(QN, db) 
+    else:
+        logging.warning(
+            "B state Hamiltonian not pre-cached for supplied states, calculating"
+            )
+        return calculate_coupled_hamiltonian_B(QN)
 
 def calculate_coupled_hamiltonian_B(QN):
     for qn in QN:

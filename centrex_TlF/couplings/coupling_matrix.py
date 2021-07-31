@@ -1,9 +1,11 @@
-from centrex_TlF.couplings.utils_sqlite import read_db_into_memory
 import sqlite3
+import logging
 import numpy as np
 import multiprocessing
 from pathlib import Path
-from centrex_TlF.couplings.utils_sqlite import read_db_into_memory
+from centrex_TlF.couplings.utils_sqlite import (
+    check_states_in_ED_ME_coupled
+)
 from centrex_TlF.couplings.matrix_elements import (
     generate_ED_ME_mixed_state, calculate_ED_ME_mixed_state
 )
@@ -35,22 +37,23 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
     """
     assert isinstance(QN, list), "QN required to be of type list"
 
-    # connect to sqlite3 database on file, not used when multiprocessing
-    path = Path(__file__).parent.parent / "pre_calculated"
-    db = path / "matrix_elements.db"
+    # check if states are pre-cached
+    Jg = np.unique([s[1].J for state in QN for s in state if s[1].electronic_state == "X"])
+    Je = np.unique([s[1].J for state in QN for s in state if s[1].electronic_state == "B"])
+    pre_cached = check_states_in_ED_ME_coupled(Jg, Je, pol_vec)
 
-    con = sqlite3.connect(db)
-    cur = con.cursor()
-    cur.execute("PRAGMA synchronous = OFF")
-    cur.execute("PRAGMA journal_mode = MEMORY")
+    if pre_cached:
+        if nprocs > 1:
+            logging.warning("Pre-cached calculations, multiprocessing not used")
 
-    if nprocs > 1:
-        with multiprocessing.Pool(nprocs) as pool:
-            result = pool.starmap(multi_coupling_matrix,
-                [(QN, gs, excited_states, pol_vec, reduced) 
-                    for gs in ground_states])
-        H = np.sum(result, axis = 0)
-    else:
+        # connect to sqlite3 database on file, not used when multiprocessing
+        path = Path(__file__).parent.parent / "pre_calculated"
+        db = path / "matrix_elements.db"
+
+        con = sqlite3.connect(db)
+        cur = con.cursor()
+        cur.execute("PRAGMA synchronous = OFF")
+        cur.execute("PRAGMA journal_mode = MEMORY")
         # initialize the coupling matrix
         H = np.zeros((len(QN),len(QN)), dtype = complex)
 
@@ -67,11 +70,12 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
                                             pol_vec = pol_vec, 
                                             reduced = reduced,
                                             con = con)
-
-    # make H hermitian
-    H = H + H.conj().T
-    con.close()
-    return H
+        con.close()
+        H = H + H.conj().T
+        return H
+    else:
+        return calculate_ED_ME_mixed_state(QN, ground_states, excited_states,
+                                            pol_vec, reduced, nprocs)
 
 def calculate_coupling_matrix(QN, ground_states, excited_states, 
                             pol_vec = np.array([0,0,1]), reduced = False,

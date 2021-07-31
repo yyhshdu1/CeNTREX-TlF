@@ -29,7 +29,7 @@ def generate_transform_matrix(basis1, basis2, progress = False):
 
     #Check that the two bases have the same dimension
     assert len(basis1) == len(basis2), "Bases don't have the same dimension"
-        
+    
     return retrieve_S_transform_uncoupled_to_coupled_sqlite(basis1, basis2, db)
 
 def calculate_transform_matrix(basis1, basis2, progress = False, nprocs = 2):

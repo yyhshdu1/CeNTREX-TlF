@@ -1,5 +1,7 @@
+import json
 import sqlite3
 import numpy as np
+from pathlib import Path
 
 def retrieve_uncoupled_hamiltonian_X_sqlite(QN, db):
     con = sqlite3.connect(db)
@@ -61,3 +63,23 @@ def retrieve_S_transform_uncoupled_to_coupled_sqlite(basis1, basis2, db):
                     S_transform[i,j] = values[0] + 1j*values[1]
     con.close()
     return S_transform
+
+def check_states_hamiltonian(QN, ham):
+    # load json
+    path = Path(__file__).parent.parent / "pre_calculated"
+    js = path / "precalculated.json"
+    with open(js) as json_file:
+        f = json.load(json_file)
+
+    # check if Js are pre-cached
+    Js = np.unique([s.J for s in QN])
+    if not np.all([J in f[ham] for J in Js]):
+        return False
+    else:
+        return True
+
+def check_states_coupled_hamiltonian_B(QN):
+    return check_states_hamiltonian(QN, 'coupled_hamiltonian_B')
+
+def check_states_uncoupled_hamiltonian_X(QN):
+    return check_states_hamiltonian(QN, 'uncoupled_hamiltonian_X')
