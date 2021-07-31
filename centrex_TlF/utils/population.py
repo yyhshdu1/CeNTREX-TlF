@@ -71,7 +71,7 @@ def generate_thermal_J(Js, n_excited, T, normalized = True):
         p = thermal_population(J, T)
         l = J_levels(J)
         sl = np.s_[index:index+l]
-        np.fill_diagonal(ρ[sl, sl], p/levels)
+        np.fill_diagonal(ρ[sl, sl], p/l)
         index += l
 
     if normalized:
