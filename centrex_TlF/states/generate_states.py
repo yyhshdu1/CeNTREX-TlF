@@ -11,7 +11,8 @@ __all__ = [
 ]
 
 def generate_uncoupled_states_ground(Js):
-    QN = np.array([UncoupledBasisState(J,mJ,I_Tl,m1,I_F,m2, Omega = 0, 
+    # convert J to int(J); np.int with (-1)**J throws an exception for negative J
+    QN = np.array([UncoupledBasisState(int(J),mJ,I_Tl,m1,I_F,m2, Omega = 0, 
                                         P = parity_X(J), 
                                         electronic_state='X')
           for J in Js
