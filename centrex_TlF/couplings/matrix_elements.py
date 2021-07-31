@@ -1,7 +1,13 @@
+import sqlite3
 import numpy as np
+from pathlib import Path
 from centrex_TlF.couplings.utils import threej_f, sixj_f
+from centrex_TlF.couplings.utils_sqlite import (
+    retrieve_ED_ME_coupled_sqlite_single
+)
 
-def ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]), reduced = False):
+def calculate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]), 
+                                reduced = False):
     """calculate electric dipole matrix elements between mixed states
 
     Args:
@@ -17,12 +23,42 @@ def ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]), reduced = False):
     ME = 0
     bra = bra.transform_to_omega_basis()
     ket = ket.transform_to_omega_basis()
+
     for amp_bra, basis_bra in bra.data:
         for amp_ket, basis_ket in ket.data:
             ME += amp_bra.conjugate()*amp_ket*ED_ME_coupled(
                     basis_bra, basis_ket, pol_vec = pol_vec, rme_only = reduced
                     )
 
+    return ME
+
+def generate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
+                                reduced = False, con = None):
+    """calculate electric dipole matrix elements between mixed states
+
+    Args:
+        bra (State): state object
+        ket (State): state object
+        pol_vec (np.ndarray, optional): polarization vector. 
+                                        Defaults to np.array([1,1,1]).
+        reduced (bool, optional): [description]. Defaults to False.
+
+    Returns:
+        complex: matrix element between bra and ket
+    """
+    if not con:
+        return calculate_ED_ME_mixed_state(bra, ket, pol_vec, reduced)
+    ME = 0
+    bra = bra.transform_to_omega_basis()
+    ket = ket.transform_to_omega_basis()
+
+    for amp_bra, basis_bra in bra.data:
+        for amp_ket, basis_ket in ket.data:
+            ME += amp_bra.conjugate()*amp_ket*\
+                    retrieve_ED_ME_coupled_sqlite_single(
+                    basis_bra, basis_ket, pol_vec = pol_vec, rme_only = reduced,
+                    con = con
+                    )
     return ME
 
 def ED_ME_coupled(bra,ket, pol_vec = np.array([1,1,1]), rme_only = False):

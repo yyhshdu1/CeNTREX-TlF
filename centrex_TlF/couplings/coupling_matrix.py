@@ -1,14 +1,77 @@
+from centrex_TlF.couplings.utils_sqlite import read_db_into_memory
+import sqlite3
 import numpy as np
 import multiprocessing
-from centrex_TlF.couplings.matrix_elements import ED_ME_mixed_state
+from pathlib import Path
+from centrex_TlF.couplings.utils_sqlite import read_db_into_memory
+from centrex_TlF.couplings.matrix_elements import (
+    generate_ED_ME_mixed_state, calculate_ED_ME_mixed_state
+)
 from centrex_TlF.couplings.utils_multiprocessing import multi_coupling_matrix
 from centrex_TlF.states.utils import (
     find_exact_states, check_approx_state_exact_state
 )
 
 __all__ = [
-    'calculate_coupling_matrix', 'generate_coupling_field', 'generate_D'
+    'calculate_coupling_matrix', 'generate_coupling_field', 'generate_D',
+    'generate_coupling_matrix'
 ]
+
+def generate_coupling_matrix(QN, ground_states, excited_states, 
+                            pol_vec = np.array([0,0,1]), reduced = False,
+                            nprocs = 1):
+    """generate optical coupling matrix for given ground and excited states
+
+    Args:
+        QN (list): list of basis states
+        ground_states (list): list of ground states coupling to excited states
+        excited_states (list): list of excited states
+        pol_vec (np.ndarray, optional): polarization vector. Defaults to np.array([0,0,1]).
+        reduced (bool, optional): [description]. Defaults to False.
+        nrpocs (int): # processes to use for multiprocessing
+
+    Returns:
+        np.ndarray: optical coupling matrix
+    """
+    assert isinstance(QN, list), "QN required to be of type list"
+
+    # connect to sqlite3 database on file, not used when multiprocessing
+    path = Path(__file__).parent.parent / "pre_calculated"
+    db = path / "matrix_elements.db"
+
+    con = sqlite3.connect(db)
+    cur = con.cursor()
+    cur.execute("PRAGMA synchronous = OFF")
+    cur.execute("PRAGMA journal_mode = MEMORY")
+
+    if nprocs > 1:
+        with multiprocessing.Pool(nprocs) as pool:
+            result = pool.starmap(multi_coupling_matrix,
+                [(QN, gs, excited_states, pol_vec, reduced) 
+                    for gs in ground_states])
+        H = np.sum(result, axis = 0)
+    else:
+        # initialize the coupling matrix
+        H = np.zeros((len(QN),len(QN)), dtype = complex)
+
+        # start looping over ground and excited states
+        for ground_state in ground_states:
+            i = QN.index(ground_state)
+            for excited_state in excited_states:
+                j = QN.index(excited_state)
+
+                # calculate matrix element and add it to the Hamiltonian
+                H[i,j] = generate_ED_ME_mixed_state(
+                                            ground_state, 
+                                            excited_state, 
+                                            pol_vec = pol_vec, 
+                                            reduced = reduced,
+                                            con = con)
+
+    # make H hermitian
+    H = H + H.conj().T
+    con.close()
+    return H
 
 def calculate_coupling_matrix(QN, ground_states, excited_states, 
                             pol_vec = np.array([0,0,1]), reduced = False,
@@ -45,7 +108,7 @@ def calculate_coupling_matrix(QN, ground_states, excited_states,
                 j = QN.index(excited_state)
 
                 # calculate matrix element and add it to the Hamiltonian
-                H[i,j] = ED_ME_mixed_state(
+                H[i,j] = calculate_ED_ME_mixed_state(
                                             ground_state, 
                                             excited_state, 
                                             pol_vec = pol_vec, 
@@ -94,8 +157,7 @@ def generate_coupling_field(ground_main_approx, excited_main_approx,
 
     check_approx_state_exact_state(ground_main_approx, ground_main)
     check_approx_state_exact_state(excited_main_approx, excited_main)
-
-    ME_main = ED_ME_mixed_state(
+    ME_main = generate_ED_ME_mixed_state(
                         excited_main, ground_main, pol_vec = pol_main)
 
     assert_msg = f"main coupling element small, {ME_main:.2e}" + \
@@ -104,7 +166,7 @@ def generate_coupling_field(ground_main_approx, excited_main_approx,
 
     couplings = []
     for pol in pol_vec:
-        coupling = calculate_coupling_matrix(
+        coupling = generate_coupling_matrix(
                                             QN, 
                                             ground_states, 
                                             excited_states, 

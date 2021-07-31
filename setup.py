@@ -15,7 +15,8 @@ setuptools.setup(
     data_files = [('centrex_TlF/pre_calculated', 
                     ['centrex_TlF/pre_calculated/transformation.db',
                      'centrex_TlF/pre_calculated/uncoupled_hamiltonian_X.db',
-                     'centrex_TlF/pre_calculated/coupled_hamiltonian_B.db'])],
+                     'centrex_TlF/pre_calculated/coupled_hamiltonian_B.db',
+                     'centrex_TlF/pre_calculated/matrix_elements.db'])],
     python_requires = '>=3.6',
     version = "0.1"
 )

@@ -1,5 +1,7 @@
 import numpy as np
-from centrex_TlF.couplings.matrix_elements import ED_ME_mixed_state
+from centrex_TlF.couplings.matrix_elements import (
+    generate_ED_ME_mixed_state
+)
 
 __all__ = [
     'calculate_BR'
@@ -26,7 +28,7 @@ def calculate_BR(excited_state, ground_states, tol = 1e-5):
 
     #loop over ground states
     for i, ground_state in enumerate(ground_states):
-        MEs[i] = ED_ME_mixed_state(
+        MEs[i] = generate_ED_ME_mixed_state(
             ground_state.remove_small_components(tol = tol),
             excited_state.remove_small_components(tol = tol)
             )
