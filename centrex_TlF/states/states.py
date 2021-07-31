@@ -72,7 +72,12 @@ class CoupledBasisState:
         I1 = sp.S(str(self.I1),rational = True)
         I2 = sp.S(str(self.I2),rational = True)
         electronic_state = self.electronic_state
-        P = '+' if self.P == 1 else '-'
+        if self.P == 1:
+            P = '+'
+        elif self.P == -1:
+            P = '-'
+        else:
+            P = None
         Omega = self.Omega
 
         string = f"J = {J}, F₁ = {F1}, F = {F}, mF = {mF}, I₁ = {I1}, I₂ = {I2}"
@@ -226,7 +231,12 @@ class UncoupledBasisState:
         I2 = sp.S(str(self.I2),rational = True)
         m2 = sp.S(str(self.m2),rational = True)
         electronic_state = self.electronic_state
-        P = '+' if self.P == 1 else '-'
+        if self.P == 1:
+            P = '+'
+        elif self.P == -1:
+            P = '-'
+        else:
+            P = None
         Omega = self.Omega
         
         string = f"J = {J}, mJ = {mJ}, I₁ = {I1}, m₁ = {m1}, I₂ = {I2}, m₂ = {m2}"
