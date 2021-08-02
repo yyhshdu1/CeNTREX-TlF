@@ -1,10 +1,10 @@
 {
     "matrix_elements": {
-        "X": [0,1,2,3,4],
-        "B": [1,2,3,4],
+        "X": [0,1,2,3,4,5,6],
+        "B": [1,2,3,4,5],
         "pol_vec": [[1,0,0], [0,1,0], [0,0,1], [1,1,1]]
     },
-    "coupled_hamiltonian_B": [0,1,2],
+    "coupled_hamiltonian_B": [0,1,2,3],
     "uncoupled_hamiltonian_X": [0,1,2,3,4,5,6],
-    "transformation": [0,1,2,3,4,5,6]
+    "transformation": [0,1,2,3]
 }
