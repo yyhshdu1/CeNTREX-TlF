@@ -3,7 +3,8 @@ import numpy as np
 from pathlib import Path
 from centrex_TlF.couplings.utils import threej_f, sixj_f
 from centrex_TlF.couplings.utils_sqlite import (
-    retrieve_ED_ME_coupled_sqlite_single
+    retrieve_ED_ME_coupled_sqlite_single,
+    retrieve_ED_ME_coupled_sqlite_single_rme
 )
 
 def calculate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]), 
@@ -52,12 +53,16 @@ def generate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
     bra = bra.transform_to_omega_basis()
     ket = ket.transform_to_omega_basis()
 
+    if reduced:
+        retrieve = retrieve_ED_ME_coupled_sqlite_single_rme
+    else:
+        retrieve = retrieve_ED_ME_coupled_sqlite_single
+
     for amp_bra, basis_bra in bra.data:
         for amp_ket, basis_ket in ket.data:
             ME += amp_bra.conjugate()*amp_ket*\
-                    retrieve_ED_ME_coupled_sqlite_single(
-                    basis_bra, basis_ket, pol_vec = pol_vec, rme_only = reduced,
-                    con = con
+                    retrieve(
+                        basis_bra, basis_ket, pol_vec = pol_vec, con = con
                     )
     return ME
 
