@@ -1,29 +1,89 @@
+import logging
+import numpy as np
 from sympy import zeros, Symbol
-
+from centrex_TlF.couplings import (
+    generate_total_hamiltonian
+)
+from centrex_TlF.lindblad.utils_compact import (
+    delete_row_column_symbolic
+)
 __all__ = [
-    'generate_symbolic_hamiltonian', 'generate_symbolic_detunings'
+    'generate_symbolic_hamiltonian', 'generate_symbolic_detunings', \
+    'generate_total_symbolic_hamiltonian'
 ]
 
-def generate_symbolic_hamiltonian(n_states, laser_fields):
-    hamiltonian = zeros(n_states, n_states)
+def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
+                                    pols = None):
 
-    for idf, (laser_field, ME_main) in enumerate(laser_fields):
-        Ω = Symbol(f'Ω{idf+1}', complex = True)
-        Ωᶜ = Symbol(f'Ω{idf+1}ᶜ', complex = True)
-        hamiltonian += (Ω/ME_main)/2 * laser_field
+    n_states = H_rot.shape[0]
 
-    # ensure Hermitian Hamiltonian for complex Ω
+    if not Ωs:
+        Ωs = [Symbol(f'Ω{idx}', complex = True) for idx in range(len(couplings))]
+    if len(Ωs) != len(couplings):
+        Ωs = [Symbol(f'Ω{idx}', complex = True) for idx in range(len(couplings))]
+        logging.warning("Warning in generate_symbolic_hamiltonian: supplied " +
+                    f"Ωs length does not match # couplings ({len(Ωs)} != {len(couplings)})"
+            )
+    if not Δs:
+        Δs = [Symbol(f'Δ{idx}') for idx in range(len(couplings))]
+    if len(Δs) != len(couplings):
+        Δs = [Symbol(f'Δ{idx}') for idx in range(len(couplings))]
+        logging.warning("Warning in generate_symbolic_hamiltonian: supplied " +
+                    f"Δs length does not match # couplings ({len(Δs)} != {len(couplings)})"
+            )
+
+    # initialize empty Hamiltonian
+    hamiltonian = zeros(*H_rot.shape)
+
+    # add the couplings to the fields 
+    for idc, (Ω, coupling) in enumerate(zip(Ωs, couplings)):
+        # check if Ω symbol exists, else create
+        if not Ω:
+            _ = idc
+            while True:
+                Ω = Symbol(f'Ω{_}', complex = True)
+                _ += 1
+                if Ω not in Ωs:
+                    break
+            Ωs[idc] = Ω
+        main_coupling = coupling['main coupling']
+        for field in coupling['fields']:
+            if pols:
+                P = pols[idc]
+                if P:
+                    P = P[tuple(field['pol'])]
+                    hamiltonian += (P*Ω/main_coupling)/2 * field['field']
+                else:
+                    hamiltonian += (Ω/main_coupling)/2 * field['field'] 
+            else:
+                hamiltonian += (Ω/main_coupling)/2 * field['field']
+
+    # add detunings to the hamiltonian
+    for idc, (Δ, coupling) in enumerate(zip(Δs, couplings)):
+        # check if Δ symbol exists, else create
+        if not Δ:
+            _ = idc
+            while True:
+                Δ = Symbol(f'Δ{_}')
+                _ += 1
+                if Δ not in Δs:
+                    break
+            Δs[idc] = Δ
+        indices = [QN.index(s) for s in coupling['excited states']]
+        for idx in indices:
+            hamiltonian[idx,idx] += Δ
+
+    # ensure hermitian Hamiltonian for complex Ω
+    # complex conjugate Rabi rates
+    Ωsᶜ = [Symbol(str(Ω)+"ᶜ", complex = True) for Ω in Ωs]
     for idx in range(n_states):
-        for idy in range(n_states):
-            if idx > idy:
-                for idf in range(len(laser_field)):
-                    Ω = Symbol(f'Ω{idf+1}', complex = True)
-                    Ωᶜ = Symbol(f'Ω{idf+1}ᶜ', complex = True)
-                    hamiltonian[idx,idy] = hamiltonian[idx,idy].subs(Ω, Ωᶜ)
-    symbols = [(Symbol(f'Ω{idf+1}', complex = True), 
-                Symbol(f'Ω{idf+1}ᶜ', complex = True))
-                for idf in range(len(laser_fields))]
-    return hamiltonian, symbols
+        for idy in range(0,idx):
+            for Ω,Ωᶜ in zip(Ωs, Ωsᶜ):
+                hamiltonian[idx,idy] = hamiltonian[idx,idy].subs(Ω, Ωᶜ)
+    
+    hamiltonian += H_rot
+
+    return hamiltonian#, symbols
 
 def generate_symbolic_detunings(n_states, detunings):
     detuning = zeros(n_states, n_states)
@@ -44,3 +104,25 @@ def generate_symbolic_detunings(n_states, detunings):
         symbols = [Symbol(f'Δ{idd+1}', complex = True)
                     for idd in range(len(detunings))]
     return detuning, symbols
+
+def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
+                                        slice_compact = None):
+    H_rot = generate_total_hamiltonian(H_int, QN, couplings)
+    Ωs = [t.get('Ω symbol') for t in transitions]
+    Δs = [t.get('Δ symbol') for t in transitions]
+    pols = []
+    for transition in transitions:
+        if not transition.get('polarization symbols'):
+            pols.append(None)
+        else:
+            _ = {tuple(p): ps for p, ps in  zip(transition['polarizations'], 
+                                        transition['polarization symbols'])}
+            pols.append(_)
+
+    H_symbolic = generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs, Δs, 
+                                                                        pols)
+
+    if slice_compact:
+        H_symbolic = delete_row_column_symbolic(H_symbolic, slice_compact)
+
+    return H_symbolic

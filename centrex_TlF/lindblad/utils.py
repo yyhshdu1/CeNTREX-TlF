@@ -1,8 +1,7 @@
-import copy
 from sympy import zeros, Symbol
 
 __all__ = [
-    'generate_density_matrix_symbolic', 'subs_rabi_rate'
+    'generate_density_matrix_symbolic'
 ]
 
 def recursive_subscript(i):
@@ -28,13 +27,3 @@ def generate_density_matrix_symbolic(levels):
                 ρ[j,i] = Symbol(u'\u03C1{1},{0}'. \
                 format(recursive_subscript(i), recursive_subscript(j)))
     return ρ
-
-def subs_rabi_rate(hamiltonian, originals, replacement):
-    ham = copy(hamiltonian)
-    Ωr = Symbol(f'Ω{replacement}', complex = True)
-    Ωrᶜ = Symbol(f'Ω{replacement}ᶜ', complex = True)
-    for original in originals:
-        Ω = Symbol(f'Ω{original}', complex = True)
-        Ωᶜ = Symbol(f'Ω{original}ᶜ', complex = True)
-        ham = ham.subs((Ω, Ωr), (Ωᶜ, Ωrᶜ))
-    return ham
