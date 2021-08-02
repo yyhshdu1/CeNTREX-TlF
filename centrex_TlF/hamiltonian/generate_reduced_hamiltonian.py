@@ -14,6 +14,7 @@ from centrex_TlF.hamiltonian.utils import (
 
 __all__ = [
     'generate_reduced_X_hamiltonian', 'generate_reduced_B_hamiltonian',
+    'compose_reduced_hamiltonian', 'generate_total_reduced_hamiltonian'
 ]
 
 def generate_diagonalized_hamiltonian(hamiltonian, keep_order = True, 
@@ -107,3 +108,36 @@ def generate_reduced_B_hamiltonian(excited_states_approx,
 
     H_B_red = reduced_basis_hamiltonian(QN_B_diag, H_B_diag, excited_states)
     return excited_states, H_B_red
+
+def compose_reduced_hamiltonian(H_X_red, H_B_red, element_limit = 0.1):
+    H_X_red[np.abs(H_X_red) < element_limit] = 0
+    H_B_red[np.abs(H_B_red) < element_limit] = 0
+
+    H_int = scipy.linalg.block_diag(H_X_red, H_B_red)
+    V_ref_int = np.eye(H_int.shape[0])
+
+    return H_int, V_ref_int
+
+def generate_total_reduced_hamiltonian(ground_states_approx, 
+                                        excited_states_approx,
+                                        Jmin = None,
+                                        Jmax = None):
+    ground_states, H_X_red = \
+        generate_reduced_X_hamiltonian(ground_states_approx)
+
+    # Js to include for rotational mixing in B state
+    Jexc = np.unique([s.J for s in excited_states_approx])
+    if not Jmin:
+        Jmin = np.min(Jexc)
+        Jmin = 1 if Jmin -1 < 1 else Jmin -1
+    if not Jmax:
+        Jmax = np.max(Jexc) + 1
+
+    excited_states, H_B_red = \
+        generate_reduced_B_hamiltonian(excited_states_approx, Jmin, Jmax)
+    
+    H_int, V_ref_int = compose_reduced_hamiltonian(H_X_red, H_B_red)
+
+    QN = list(np.append(ground_states, excited_states))
+    return ground_states, excited_states, QN, H_int, V_ref_int
+    
