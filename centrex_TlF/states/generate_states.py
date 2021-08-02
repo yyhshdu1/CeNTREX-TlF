@@ -43,13 +43,15 @@ def generate_coupled_states_ground(Js):
 
 def generate_coupled_states_excited(Js, Fs = None, F1s = None, Ps = None):
     if not Fs:
+        if not Ps:
+            Ps = [+1]
         QN =  np.array([CoupledBasisState(F,mF,F1,J,I_F,I_Tl, 
-            electronic_state='B', P = P, Omega = 0)
+            electronic_state='B', P = P, Omega = 1)
             for J  in Js
             for F1 in np.arange(np.abs(J-I_F),J+I_F+1)
             for F in np.arange(np.abs(F1-I_Tl),F1+I_Tl+1)
             for mF in np.arange(-F, F+1)
-            for P in [-1,1]
+            for P in Ps
             ])
     else:
         assert None not in [Fs, F1s, Ps], \
