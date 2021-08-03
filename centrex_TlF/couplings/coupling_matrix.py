@@ -44,7 +44,7 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
 
     if pre_cached:
         if nprocs > 1:
-            logging.warning("Pre-cached calculations, multiprocessing not used")
+            logging.warning("generate_coupling_matrix: Pre-cached calculations, multiprocessing not used")
 
         # connect to sqlite3 database on file, not used when multiprocessing
         path = Path(__file__).parent.parent / "pre_calculated"
@@ -243,4 +243,5 @@ def calculate_coupling_field(ground_main_approx, excited_main_approx,
         coupling[np.abs(coupling) < absolute_coupling] = 0
         d = {'pol': pol, 'field': coupling}
         couplings['fields'].append(d)
+
     return couplings
