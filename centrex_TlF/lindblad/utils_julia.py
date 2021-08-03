@@ -4,7 +4,8 @@ from julia import Main
 __all__ = [
     'initialize_julia', 'generate_ode_fun_julia', 'setup_variables_julia',
     'odeParameters', 'setup_parameter_scan_1D', 'setup_ratio_calculation',
-    'setup_initial_condition_scan', 'setup_state_integral_calculation'
+    'setup_initial_condition_scan', 'setup_state_integral_calculation',
+    'get_indices_diag_flattened', 'setup_parameter_scan_ND'
 ]
 
 def initialize_julia(nprocs):
@@ -74,6 +75,17 @@ class odeParameters:
     
     def get_index_parameter(self, par):
         return self.parameters.index(par)
+
+    def to_units_Γ(self, Γ):
+        rep = "odeParameters("
+        for par in self.parameters:
+            if ('Ω' in par) or ('δ' in par) or ('ω' in par):
+                rep += f"{par}: {getattr(self, par)/Γ:.2f}, "
+            else:
+                rep += f"{par}: {getattr(self, par):.2f}, "
+        rep = rep.strip(", ")
+        rep += ")"
+        return rep
     
     def __repr__(self):
         rep = "odeParameters("
@@ -88,7 +100,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
         indices = [odePar.get_index_parameter(par) for par in parameter]
     else:
         indices = [odePar.get_index_parameter(parameter)]
-        
+
     pars = str(odePar.generate_p()).strip('[]').split(',')
     for idx in indices:
         pars[idx] = "params[i]"
@@ -101,6 +113,27 @@ def setup_parameter_scan_1D(odePar, parameter, values):
         remake(prob, p = {pars})
     end
     """)
+
+def setup_parameter_scan_ND(odePar, parameters, values):
+    pars = str(odePar.generate_p()).strip('[]').split(',')
+
+    for idN, parameter in enumerate(parameters):
+        if isinstance(parameter, (list, tuple)):
+            indices = [odePar.get_index_parameter(par) for par in parameter]
+        else:
+            indices = [odePar.get_index_parameter(parameter)]
+        for idx in indices:
+            pars[idx] = f"params[i,{idN+1}]"
+    pars = "[" + ",".join(pars) + "]"
+    params = np.array(np.meshgrid(*values)).T.reshape(-1,len(values))
+    Main.params = params
+    Main.eval(f"""
+    @everywhere params = $params
+    @everywhere function prob_func(prob, i, repeat)
+        remake(prob, p = {pars})
+    end
+    """)
+
 
 def setup_ratio_calculation(states):
     cmd = ""
@@ -136,3 +169,6 @@ def setup_state_integral_calculation(states):
     @everywhere function output_func(sol,i)
         return trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
     end""")
+
+def get_indices_diag_flattened(n):
+    return np.diag(np.arange(0,n*n).reshape(-1,n))
