@@ -1,3 +1,4 @@
+import numpy as np
 from julia import Main
 
 __all__ = [
@@ -83,9 +84,15 @@ class odeParameters:
         return rep
 
 def setup_parameter_scan_1D(odePar, parameter, values):
-    idx = odePar.get_index_parameter(parameter)
+    if isinstance(parameter, (list, tuple)):
+        indices = [odePar.get_index_parameter(par) for par in parameter]
+    else:
+        indices = [odePar.get_index_parameter(parameter)]
+        
     pars = str(odePar.generate_p()).strip('[]').split(',')
-    pars[idx] = "params[i]"
+    for idx in indices:
+        pars[idx] = "params[i]"
+    
     pars = "[" + ",".join(pars) + "]"
     Main.params = values
     Main.eval(f"""
@@ -96,13 +103,21 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     """)
 
 def setup_ratio_calculation(states):
+    cmd = ""
+    if isinstance(states[0], (list, np.ndarray, tuple)):
+        for state in states:
+            cmd += f"sum(real(diag(sol.u[end])[{state}]))/sum(real(diag(sol.u[1])[{state}])), "
+        cmd = cmd.strip(', ')
+        cmd = "[" + cmd + "]"
+    else:
+        cmd = f"sum(real(diag(sol.u[end])[{states}]))/sum(real(diag(sol.u[1])[{states}]))"
+
     Main.eval(f"""
     @everywhere function output_func(sol,i)
-        if size(sol.u)[1] != 2
+        if size(sol.u)[1] == 1
             return NaN, false
         else
-            val = [real(sol.u[2][1,1])/real(sol.u[1][1,1]),
-                sum(real(diag(sol.u[2])[{states}]))/sum(real(diag(sol.u[1])[{states}]))]
+            val = {cmd}
             return val, false
         end
     end""")
