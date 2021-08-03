@@ -85,3 +85,13 @@ def generate_total_hamiltonian(H_int, QN, couplings):
         H_rot -= np.eye(len(H_rot))*H_rot[gnd_idx,gnd_idx]
         H_rot += coupling['D']
     return H_rot
+
+def check_transitions(transitions):
+    ground_states = np.concatenate([transition['ground states approx'] 
+                        for transition in transitions])
+    excited_states = np.concatenate([transition['excited states approx'] 
+                        for transition in transitions])
+    ground_states = np.concatenate([list(zip(*gs.data))[1] for gs in ground_states])
+    excited_states = np.concatenate([list(zip(*es.data))[1] for es in excited_states])
+    for gs in ground_states:
+        assert gs not in excited_states, f"{gs} is both ground state and excited state"
