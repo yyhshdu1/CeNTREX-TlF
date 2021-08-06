@@ -53,7 +53,7 @@ def calculate_transform_matrix(basis1, basis2, progress = False, nprocs = 2):
     assert len(basis1) == len(basis2), "Bases don't have the same dimension"
 
     # multiprocessing
-    if nprocs >= 1:
+    if nprocs > 1:
         with multiprocessing.Pool(nprocs) as pool:
             result = pool.starmap(multi_transformation_matrix,
                 [(i,state1,basis2) for i, state1 in enumerate(basis1)])

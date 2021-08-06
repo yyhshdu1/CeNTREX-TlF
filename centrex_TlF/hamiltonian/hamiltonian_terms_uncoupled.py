@@ -1,10 +1,9 @@
 import numpy as np
 import centrex_TlF.states as states
-from sympy.physics.wigner import wigner_3j
 import centrex_TlF.constants.constants_X as cst_X
 import centrex_TlF.constants.constants_B  as cst_B
+from centrex_TlF.hamiltonian.utils import threej_f, sixj_f
 from centrex_TlF.states.states import State, UncoupledBasisState
-
 from centrex_TlF.hamiltonian.quantum_operators import (
     com, J2, I1z, I1p, Jz, Jm, I1m, Jp, I2m, I2p, I1x, I2x, I2y, I1y, Jy, Jx, 
     I2z, J4, J6
@@ -64,7 +63,7 @@ def H_LD(psi):
     Omega = psi.Omega
     Omegaprime = -Omega
     
-    amp = (cst_B.q*(-1)**(J-Omegaprime)/(2*np.sqrt(6)) * wigner_3j(J,2,J,-Omegaprime,Omegaprime-Omega, Omega)
+    amp = (cst_B.q*(-1)**(J-Omegaprime)/(2*np.sqrt(6)) * threej_f(J,2,J,-Omegaprime,Omegaprime-Omega, Omega)
            *np.sqrt((2*J-1)*2*J*(2*J+1)*(2*J+2)*(2*J+3)) )
     ket = UncoupledBasisState(J, mJ, I1, m1, I2, m2, Omegaprime,
                                 electronic_state = psi.electronic_state)
@@ -113,14 +112,14 @@ def H_c1p(psi):
                 #Matrix element for T(J)T(I)
                 term1 = ((-1)**(Jprime-Omegaprime+I1-m1-q+mJprime)*np.sqrt(Jprime*(Jprime+1)*(2*Jprime+1)**2*(2*J+1)*I1*(I1+1)
                                                                            *(2*I1+1))
-                         * complex(wigner_3j(Jprime,1,J,-mJprime,mJprime-mJ, mJ)) * complex(wigner_3j(I1,1,I1,-m1prime, m1prime-m1, m1))
-                         * complex(wigner_3j(Jprime, 1, J, 0, -q, Omega)) * complex(wigner_3j(Jprime, 1, Jprime, -Omegaprime, -q, 0)))
+                         * (threej_f(Jprime,1,J,-mJprime,mJprime-mJ, mJ)) * (threej_f(I1,1,I1,-m1prime, m1prime-m1, m1))
+                         * (threej_f(Jprime, 1, J, 0, -q, Omega)) * (threej_f(Jprime, 1, Jprime, -Omegaprime, -q, 0)))
 
                 #Matrix element for T(I)T(J)
                 term2 = ((-1)**(mJprime+J-Omegaprime+I1-m1-q)*np.sqrt(J*(J+1)*(2*J+1)**2*(2*Jprime+1)*I1*(I1+1)
                                                                                    *(2*I1+1))
-                        *complex(wigner_3j(Jprime,1,J,-mJprime,mJprime-mJ,mJ)) * complex(wigner_3j(Jprime,1,J,-Omegaprime,-q,0))
-                        *complex(wigner_3j(J,1,J,0,-q,Omega)) * complex(wigner_3j(I1,1,I1,-m1prime, m1prime-m1, m1)))
+                        *(threej_f(Jprime,1,J,-mJprime,mJprime-mJ,mJ)) * (threej_f(Jprime,1,J,-Omegaprime,-q,0))
+                        *(threej_f(J,1,J,0,-q,Omega)) * (threej_f(I1,1,I1,-m1prime, m1prime-m1, m1)))
 
                 amp = cst_B.c_Tl*0.5*(term1+term2)
 
@@ -159,7 +158,7 @@ def H_mhf_Tl(psi):
     #Need Jprime = J+1 ... |J-1|
     for Jprime in np.arange(np.abs(J-1), J+2):
         #Evaluate the part of the matrix element that is common for all p
-        common_coefficient = cst_B.h1_Tl*wigner_3j(J, 1, Jprime, -Omega, 0, Omega)*np.sqrt((2*J+1)*(2*Jprime+1)*I1*(I1+1)*(2*I1+1))
+        common_coefficient = cst_B.h1_Tl*threej_f(J, 1, Jprime, -Omega, 0, Omega)*np.sqrt((2*J+1)*(2*Jprime+1)*I1*(I1+1)*(2*I1+1))
         
         #Loop over the spherical tensor components of I1:
         for p in np.arange(-1,2):
@@ -172,8 +171,8 @@ def H_mhf_Tl(psi):
             #Check that mJprime and m2prime are physical
             if np.abs(mJprime) <= Jprime and np.abs(m1prime) <= I1prime:
                 #Calculate rest of matrix element
-                p_factor = ((-1)**(p-mJ+I1-m1-Omega)*wigner_3j(J, 1, Jprime, -mJ, -p, mJprime)
-                               *wigner_3j(I1, 1, I1prime, -m1, p, m1prime))
+                p_factor = ((-1)**(p-mJ+I1-m1-Omega)*threej_f(J, 1, Jprime, -mJ, -p, mJprime)
+                               *threej_f(I1, 1, I1prime, -m1, p, m1prime))
                                
                 amp = Omega*common_coefficient*p_factor
                 basis_state = UncoupledBasisState(Jprime, mJprime, I1prime, m1prime, I2prime, m2prime, psi.Omega)
@@ -204,7 +203,7 @@ def H_mhf_F(psi):
     #Need Jprime = J+1 ... |J-1|
     for Jprime in np.arange(np.abs(J-1), J+2):
         #Evaluate the part of the matrix element that is common for all p
-        common_coefficient = cst_B.h1_F*wigner_3j(J, 1, Jprime, -Omega, 0, Omega)*np.sqrt((2*J+1)*(2*Jprime+1)*I2*(I2+1)*(2*I2+1))
+        common_coefficient = cst_B.h1_F*threej_f(J, 1, Jprime, -Omega, 0, Omega)*np.sqrt((2*J+1)*(2*Jprime+1)*I2*(I2+1)*(2*I2+1))
         
         #Loop over the spherical tensor components of I2:
         for p in np.arange(-1,2):
@@ -217,8 +216,8 @@ def H_mhf_F(psi):
             #Check that mJprime and m2prime are physical
             if np.abs(mJprime) <= Jprime and np.abs(m2prime) <= I2prime:
                 #Calculate rest of matrix element
-                p_factor = ((-1)**(p-mJ+I2-m2-Omega)*wigner_3j(J, 1, Jprime, -mJ, -p, mJprime)
-                               *wigner_3j(I2, 1, I2prime, -m2, p, m2prime))
+                p_factor = ((-1)**(p-mJ+I2-m2-Omega)*threej_f(J, 1, Jprime, -mJ, -p, mJprime)
+                               *threej_f(I2, 1, I2prime, -m2, p, m2prime))
                                
                 amp = Omega*common_coefficient*p_factor
                 basis_state = UncoupledBasisState(Jprime, mJprime, I1prime, m1prime, I2prime, m2prime, psi.Omega)
@@ -296,12 +295,12 @@ def HZz_B(psi):
         
         #Electron orbital angular momentum term
         L_term = (cst_B.gL * Omega *np.sqrt((2*J+1)*(2*Jprime+1)) * (-1)**(mJprime-Omegaprime)
-                  * complex(wigner_3j(Jprime,1,J,-mJprime,0,mJ)) * complex(wigner_3j(Jprime,1,J,-Omegaprime,0,Omega)))
+                  * (threej_f(Jprime,1,J,-mJprime,0,mJ)) * (threej_f(Jprime,1,J,-Omegaprime,0,Omega)))
         
         #Electron spin term
         S_term = (cst_B.gS * np.sqrt((2*J+1)*(2*Jprime+1)) * (-1)**(mJprime-Omegaprime)
-                  * complex(wigner_3j(Jprime,1,J,-mJprime,0,mJ)) * complex(wigner_3j(Jprime,1,J,-Omegaprime,0,Omega))
-                  * (-1)**(S)*complex(wigner_3j(S,1,S,0,0,0)) * np.sqrt(S*(S+1)*(2*S+1)))
+                  * (threej_f(Jprime,1,J,-mJprime,0,mJ)) * (threej_f(Jprime,1,J,-Omegaprime,0,Omega))
+                  * (-1)**(S)*(threej_f(S,1,S,0,0,0)) * np.sqrt(S*(S+1)*(2*S+1)))
         
         amp = L_term+S_term
         basis_state = UncoupledBasisState(Jprime, mJprime, I1prime, m1prime, I2prime, m2prime, Omegaprime)

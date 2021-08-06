@@ -14,7 +14,8 @@ from centrex_TlF.hamiltonian.utils import (
 
 __all__ = [
     'generate_reduced_X_hamiltonian', 'generate_reduced_B_hamiltonian',
-    'compose_reduced_hamiltonian', 'generate_total_reduced_hamiltonian'
+    'compose_reduced_hamiltonian', 'generate_total_reduced_hamiltonian',
+    'generate_diagonalized_hamiltonian'
 ]
 
 def generate_diagonalized_hamiltonian(hamiltonian, keep_order = True, 
