@@ -1,6 +1,9 @@
+import json
+import hashlib
 import numpy as np
 import sympy as sp
-from sympy.physics.quantum.cg import CG
+import centrex_TlF
+from functools import lru_cache
 
 __all__ = [
     'CoupledBasisState', 'UncoupledBasisState', 'State'
@@ -24,6 +27,7 @@ class CoupledBasisState:
     
     # equality testing
     def __eq__(self, other):
+        # return self.__hash__() == other.__hash__()
         return self.F==other.F and self.mF==other.mF \
                      and self.I1==other.I1 and self.I2==other.I2 \
                      and self.F1==other.F1 and self.J==other.J \
@@ -61,6 +65,13 @@ class CoupledBasisState:
     def __rmul__(self, a):
         return self * a
     
+    def __hash__(self):
+        quantum_numbers = (
+            self.J, self.F1, self.F, self.mF, self.I1, self.I2, self.P, 
+            self.Omega, self.electronic_state
+        )
+        return int(hashlib.md5(json.dumps(quantum_numbers).encode()).hexdigest(), 16)
+
     def __repr__(self):
         return self.state_string()
 
@@ -119,8 +130,8 @@ class CoupledBasisState:
             for mJ in mJs:
                 for m1 in m1s:
                     for m2 in m2s:
-                        amp = (complex(CG(J, mJ, I1, m1, F1, mF1).doit()
-                                *CG(F1, mF1, I2, m2, F, mF).doit()))
+                        amp = (centrex_TlF.states.utils.CGc(J, mJ, I1, m1, F1, mF1)
+                                *centrex_TlF.states.utils.CGc(F1, mF1, I2, m2, F, mF))
                         basis_state = UncoupledBasisState(J, mJ, I1, m1, I2, m2, P = P, Omega=Omega, electronic_state = electronic_state)
                         uncoupled_state = uncoupled_state + State([(amp, basis_state)])
         
@@ -220,6 +231,13 @@ class UncoupledBasisState:
     # scalar product (a * psi)
     def __rmul__(self, a):
         return self * a
+
+    def __hash__(self):
+        quantum_numbers = (
+            self.J, self.mJ, self.I1, self.m1, self.I2, self.m2, self.P, 
+            self.Omega, self.electronic_state
+        )
+        return hashlib.md5(json.dumps(quantum_numbers).encode())
 
     def __repr__(self):
         return self.state_string()
@@ -399,6 +417,11 @@ class State:
             raise StopIteration
         self.index -= 1
         return self.data[self.index]
+
+    def __hash__(self):
+        h = tuple(a*s.__hash__() for a,s in self)
+        return int(hashlib.md5(json.dumps(h).encode()).hexdigest(),16)
+
     
     # direct access to a component
     def __getitem__(self, i):

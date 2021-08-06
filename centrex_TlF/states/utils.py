@@ -1,10 +1,18 @@
 import numpy as np
+from functools import lru_cache
+from sympy.physics.quantum.cg import CG
+from centrex_TlF.states.states import State
 from centrex_TlF.hamiltonian.utils import reorder_evecs
 
 __all__ = [
     'find_state_idx_from_state', 'find_exact_states', 
-    'check_approx_state_exact_state', 'parity_X'
+    'check_approx_state_exact_state', 'parity_X', 'BasisStates_from_State',
+    'CGc'
 ]
+
+@lru_cache(maxsize = int(1e6))
+def CGc(j1, m1, j2, m2, j3, m3):
+    return complex(CG(j1, m1, j2, m2, j3, m3).doit())
 
 def parity_X(J):
     return (-1)**J
@@ -70,3 +78,13 @@ def check_approx_state_exact_state(approx, exact):
         f"mismatch in F1 {approx.F1} != {exact.F1}"
     assert approx.mF == exact.mF, \
         f"mismatch in mF {approx.mF} != {exact.mF}"
+
+def BasisStates_from_State(states):
+    if not isinstance(states, (list, np.ndarray, tuple)):
+        states = [states]
+    unique = []
+    for state in states:
+        for amp, basisstate in state:
+            if basisstate not in unique:
+                unique.append(basisstate)
+    return np.array(unique)
