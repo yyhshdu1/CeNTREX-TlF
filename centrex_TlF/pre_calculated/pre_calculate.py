@@ -1,5 +1,6 @@
 import json
 import copy
+import pickle
 import sqlite3
 import numpy as np
 from tqdm import tqdm
@@ -163,7 +164,19 @@ def generate_ED_ME(QN, pol_vecs, con, progress = False):
             con.commit()
     return
 
-def generate_pre_calculated(db_path = None):
+def generate_transitions(fname, QN_X, QN_B, E, B, nprocs):
+    QN, H_tot = centrex.transitions.calculate_energies(QN_X, QN_B, E, B, 
+                                nprocs = nprocs)
+
+    QN = [s.remove_small_components(1e-2) for s in QN]
+
+    with open(fname, 'wb') as f:
+        pickle.dump({'QN': QN, 'H': H_tot}, f)
+
+    return
+
+
+def generate_pre_calculated(nprocs, db_path = None):
     path = Path(__file__).parent.absolute()
     js = path / "precalculated.json"
     with open(js) as json_file:
@@ -193,29 +206,29 @@ def generate_pre_calculated(db_path = None):
     #     pass
     # con = sqlite3.connect(db_path / (db + '.db'))
     # create_coupled_hamiltonian_B_sqlite(con)
-    # QN = centrex.states.generate_coupled_states_excited(Js)
+    # QN = centrex.states.generate_coupled_states_excited(Js, Ps = [-1,1])
     # generate_coupled_hamiltonian_B_sqlite(QN, con, progress = True)
 
-    db = 'matrix_elements'
-    Jg = config[db]['X']
-    Je = config[db]['B']
-    QN = list(np.append(
-        centrex.states.generate_coupled_states_ground(Jg),
-        centrex.states.generate_coupled_states_excited(Je, P = +1)
-    ))
-    QN_B = centrex.states.generate_coupled_states_excited(Je, P = +1)
-    for idx in range(len(QN_B)):
-        QN_B[idx].Ω *= -1
-    QN.append(QN_B)
-    pol_vecs = config[db]['pol_vec']
-    print(f"pre-calculating {db} for Jg = {Jg} and Je = {Je}")
-    try:
-        (db_path / (db + '.db')).unlink()
-    except:
-        pass
-    con = sqlite3.connect(db_path / (db + '.db'))
-    create_ED_ME(con)
-    generate_ED_ME(QN, pol_vecs, con, progress = True)
+    # db = 'matrix_elements'
+    # Jg = config[db]['X']
+    # Je = config[db]['B']
+    # QN = list(np.append(
+    #     centrex.states.generate_coupled_states_ground(Jg),
+    #     centrex.states.generate_coupled_states_excited(Je, Ps = [+1])
+    # ))
+    # QN_B = centrex.states.generate_coupled_states_excited(Je, Ps = [+1])
+    # for idx in range(len(QN_B)):
+    #     QN_B[idx].Omega *= -1
+    # QN.extend(QN_B)
+    # pol_vecs = config[db]['pol_vec']
+    # print(f"pre-calculating {db} for Jg = {Jg} and Je = {Je}")
+    # try:
+    #     (db_path / (db + '.db')).unlink()
+    # except:
+    #     pass
+    # con = sqlite3.connect(db_path / (db + '.db'))
+    # create_ED_ME(con)
+    # generate_ED_ME(QN, pol_vecs, con, progress = True)
 
     # db = 'transformation'
     # Js = config[db]
@@ -230,4 +243,17 @@ def generate_pre_calculated(db_path = None):
     # QNc = centrex.states.generate_coupled_states_ground(Js)
     # generate_transformation_uncoupled_to_coupled(QN, QNc, con, progress = True)
 
-    con.close()
+    db = 'transitions'
+    JX = config[db]['X']
+    JB = config[db]['B']
+    E,B = config[db]['field'][0]
+    QN_X = centrex.states.generate_coupled_states_ground(JX)
+    QN_B = centrex.states.generate_coupled_states_excited(JB, Ps = [-1,+1])
+    generate_transitions(db_path / (db + '.pickle'), QN_X, QN_B, E, B, 
+                        nprocs = nprocs)
+    
+    # con.close()
+
+
+if __name__ == "__main__":
+    generate_pre_calculated(nprocs = 1)
