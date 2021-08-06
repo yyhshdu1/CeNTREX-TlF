@@ -1,16 +1,17 @@
 import numpy as np
+from sympy import Symbol
+import scipy.constants as cst
+# from centrex_TlF import State
+from dataclasses import dataclass
 from scipy.sparse import kron, eye
-from sympy.physics.wigner import wigner_3j, wigner_6j
+from centrex_TlF.utils import (
+    calculate_power_from_rabi_gaussian_beam,
+    calculate_rabi_from_power_gaussian_beam
+)
 
 __all__ = [
     "generate_total_hamiltonian"
 ]
-
-def threej_f(j1,j2,j3,m1,m2,m3):
-    return complex(wigner_3j(j1,j2,j3,m1,m2,m3))
-
-def sixj_f(j1,j2,j3,j4,j5,j6):
-    return complex(wigner_6j(j1,j2,j3,j4,j5,j6))
 
 def generate_sharp_superoperator(M, identity = None):
     """
@@ -95,3 +96,39 @@ def check_transitions(transitions):
     excited_states = np.concatenate([list(zip(*es.data))[1] for es in excited_states])
     for gs in ground_states:
         assert gs not in excited_states, f"{gs} is both ground state and excited state"
+
+# @dataclass
+# class Transition:
+#     ground: State
+#     excited: State
+#     ground_states: np.ndarray
+#     excited_states: np.ndarray
+#     main_polarization: np.ndarray
+#     polarizations: list
+#     polarization_symbols: list
+#     Ω: Symbol
+#     δ: Symbol
+#     description: str
+#     type: str
+
+# @dataclass
+# class Coupling:
+#     ground: State
+#     excited: State
+#     main_coupling: complex
+#     ground_states: np.ndarray
+#     excited_states: np.ndarray
+#     D: np.ndarray
+#     fields: list
+#     type: str
+#     dipole: float
+
+#     def rabi_from_power(self, P, σx, σy):
+#        return calculate_rabi_from_power_gaussian_beam(
+#             P, self.main_coupling, σx, σy, self.dipole
+#         )
+    
+#     def power_from_rabi(self, Ω, σx, σy):
+#         return calculate_power_from_rabi_gaussian_beam(
+#             Ω, self.main_coupling, σx, σy, self.dipole
+#         )
