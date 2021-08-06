@@ -5,7 +5,8 @@ __all__ = [
     'initialize_julia', 'generate_ode_fun_julia', 'setup_variables_julia',
     'odeParameters', 'setup_parameter_scan_1D', 'setup_ratio_calculation',
     'setup_initial_condition_scan', 'setup_state_integral_calculation',
-    'get_indices_diag_flattened', 'setup_parameter_scan_ND'
+    'get_indices_diag_flattened', 'setup_parameter_scan_ND', 
+    "handle_randomized_ensemble_solution"
 ]
 
 def initialize_julia(nprocs):
@@ -114,7 +115,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     end
     """)
 
-def setup_parameter_scan_ND(odePar, parameters, values):
+def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
     pars = str(odePar.generate_p()).strip('[]').split(',')
 
     for idN, parameter in enumerate(parameters):
@@ -126,14 +127,17 @@ def setup_parameter_scan_ND(odePar, parameters, values):
             pars[idx] = f"params[i,{idN+1}]"
     pars = "[" + ",".join(pars) + "]"
     params = np.array(np.meshgrid(*values)).T.reshape(-1,len(values))
-    Main.params = params
+    if randomize:
+        ind_random = np.random.permutation(len(params))
+    Main.params = params[ind_random]
     Main.eval(f"""
     @everywhere params = $params
     @everywhere function prob_func(prob, i, repeat)
         remake(prob, p = {pars})
     end
     """)
-
+    if randomize:
+        return ind_random
 
 def setup_ratio_calculation(states):
     cmd = ""
@@ -154,6 +158,11 @@ def setup_ratio_calculation(states):
             return val, false
         end
     end""")
+
+def handle_randomized_ensemble_solution(ind_random, sol_name = 'sim'):
+    order_restored = np.argsort(ind_random)
+    # Main.params = Main.params[order_restored]
+    return np.asarray(Main.params[order_restored]), np.array(Main.eval(f"{sol_name}.u"))[order_restored]
 
 def setup_initial_condition_scan(values):
     Main.params = values
