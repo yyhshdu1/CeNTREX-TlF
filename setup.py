@@ -17,7 +17,8 @@ setuptools.setup(
                      'centrex_TlF/pre_calculated/uncoupled_hamiltonian_X.db',
                      'centrex_TlF/pre_calculated/coupled_hamiltonian_B.db',
                      'centrex_TlF/pre_calculated/matrix_elements.db',
-                     'centrex_TlF/pre_calculated/precalculated.json'])],
+                     'centrex_TlF/pre_calculated/precalculated.json',
+                     'centrex_TlF/pre_calculated/transitions.pickle'])],
     python_requires = '>=3.6',
     version = "0.1"
 )
