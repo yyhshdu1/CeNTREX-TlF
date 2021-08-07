@@ -7,7 +7,7 @@ from centrex_TlF.hamiltonian.utils import reorder_evecs
 __all__ = [
     'find_state_idx_from_state', 'find_exact_states', 
     'check_approx_state_exact_state', 'parity_X', 'BasisStates_from_State',
-    'CGc'
+    'CGc', 'find_states_idxs_from_states'
 ]
 
 @lru_cache(maxsize = int(1e6))
@@ -16,6 +16,24 @@ def CGc(j1, m1, j2, m2, j3, m3):
 
 def parity_X(J):
     return (-1)**J
+
+def find_states_idxs_from_states(H, reference_states, QN, V_ref = None):
+   # find eigenvectors of the given Hamiltonian
+    E, V = np.linalg.eigh(H)
+    
+    if V_ref is not None:
+        E, V = reorder_evecs(V,E,V_ref)
+
+    indices = []
+    for reference_state in reference_states:
+        # determine state vector of reference state
+        reference_state_vec = reference_state.state_vector(QN)
+
+        overlaps = np.dot(np.conj(reference_state_vec),V)
+        probabilities = overlaps*np.conj(overlaps)
+        
+        indices.append(np.argmax(probabilities))
+    return indices
 
 def find_state_idx_from_state(H, reference_state, QN, V_ref = None):
     """Determine the index of the state vector most closely corresponding to an
