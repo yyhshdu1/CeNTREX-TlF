@@ -10,6 +10,8 @@ from .coupling_matrix import *
 from . import utils
 from .utils import *
 
+from . import matrix_elements
+
 __all__ = collapse.__all__.copy()
 __all__ += branching.__all__.copy()
 __all__ += coupling_matrix.__all__.copy()

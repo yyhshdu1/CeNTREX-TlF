@@ -4,10 +4,12 @@ import pickle
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
+from sympy import Rational
 from centrex_TlF.states.states import CoupledBasisState
 from centrex_TlF.states import (
     BasisStates_from_State,
-    find_state_idx_from_state
+    find_state_idx_from_state,
+    find_states_idxs_from_states
 )
 from centrex_TlF.hamiltonian import (
     generate_uncoupled_hamiltonian_X,
@@ -21,7 +23,8 @@ from functools import lru_cache
 
 __all__ = [
     'calculate_energies', 'calculate_transition_frequency', 
-    'generate_transition_frequency'
+    'generate_transition_frequency', 'generate_transition_frequencies',
+    'find_transition', 'identify_transition'
 ]
 
 def calculate_energies(ground_states, excited_states, E = np.array([0,0,0]), 
@@ -89,7 +92,7 @@ def _check_precached(state, config = None):
 
 @lru_cache(maxsize = 2**16)
 def generate_transition_frequency(state1, state2):
-    """Get the field freetransition frequency between state1 and state2 in 2π⋅Hz.
+    """Get the field free transition frequency between state1 and state2 in 2π⋅Hz.
     Grabs pre-cached version, otherwise throws exception.
 
     Args:
@@ -114,3 +117,97 @@ def generate_transition_frequency(state1, state2):
     return calculate_transition_frequency(state1, state2, H, QN)
     
     
+def generate_transition_frequencies(states1, states2):
+    """Get the field free transition frequencies between states1 and states2 in 
+    2π⋅Hz.
+    Grabs pre-cached version, otherwise throws exception.
+
+    Args:
+        state1 (State): TlF State
+        state2 (State): TlF State
+
+    Returns:
+        frequency: transition frequency in 2π⋅Hz
+    """
+    path = Path(__file__).parent.parent / "pre_calculated"
+    js = path / "precalculated.json"
+
+    # check if states1 and states2 are included in the pre-cached transitions
+    for state1, state2 in zip(states1, states2):
+        _check_precached(state1)
+        _check_precached(state2)
+    
+    with open(path / 'transitions.pickle', 'rb') as f:
+        _ = pickle.load(f)
+        QN, H = _['QN'], _['H']
+
+    indices1 = find_states_idxs_from_states(H, states1, QN)
+    indices2 = find_states_idxs_from_states(H, states2, QN)
+    E = np.diag(H)
+    E1 = E[indices1]
+    E2 = E[indices2]
+    return E2 - E1
+
+def find_transition(transition, F1, F, eg = 'X', ee = 'B', return_states = False):
+    transitions = {'R': +1, 'P': -1, 'Q': 0, 'S': +2, 'O': -2, 'T': +3}
+
+    Je,Jg = transition
+    Jg = int(Jg)
+    Je = Jg+transitions[Je]
+
+    ground_state = 1*CoupledBasisState(J=Jg, F1 = Jg+1/2, F = Jg, mF = 0, I1 = 1/2,
+                    I2 = 1/2, P = (-1)**Jg, Omega = 0, electronic_state = eg)
+    excited_state = 1*CoupledBasisState(J=Je, F1 = F1, F = F, mF = 0, I1 = 1/2,
+                    I2 = 1/2, P = (-1)**(Jg+1), Omega = 1, electronic_state = ee)
+    frequency =  generate_transition_frequency(ground_state, excited_state)
+    if return_states:
+        return ground_state, excited_state, frequency
+    else:
+        return frequency
+
+def identify_transition(state1, state2):
+    assert state1 != state2, 'no transition between same states'
+    transitions = {0: 'Q', +1: 'R', -1: 'P', +2: 'S', -2: 'O', +3: 'T'}
+    state1 = state1.find_largest_component()
+    state2 = state2.find_largest_component()
+    assert state1.electronic_state != 'B', 'state1 required to be a ground state'
+    assert state2.electronic_state != 'X', 'state2 required to be an excited state'
+    assert state1.isCoupled, 'supply state1 in coupled basis'
+    assert state2.isCoupled, 'supply state2 in coupled basis'
+    Jg, Je = state1.J, state2.J
+    transition = transitions[Je-Jg]
+    string = f"{transition}({Jg}) F1'={Rational(state2.F1)}, F'={Rational(state2.F)}"
+    return string
+
+# class Transition:    
+#     transitions_nom = {0: 'Q', +1: 'R', -1: 'P', +2: 'S', -2: 'O', +3: 'T'}
+#     transitions_ΔJ = {'R': +1, 'P': -1, 'Q': 0, 'S': +2, 'O': -2, 'T': +3}
+    
+#     def __init__(self, transition, F1, F, eg = 'X', ee = 'B'):
+#         Je,Jg = transition
+#         self.transition = Je
+#         self.Jg = int(Jg)
+#         self.Je = self.Jg+self.transitions_ΔJ[Je]
+#         self.F1 = F1
+#         self.F = F
+
+
+#         self.ground_state = 1*CoupledBasisState(
+#                                 J=self.Jg, F1 = self.Jg+1/2, F = self.Jg, mF = 0, 
+#                                 I1 = 1/2, I2 = 1/2, P = (-1)**self.Jg, Omega = 0, 
+#                                 electronic_state = eg
+#                                 )
+#         self.excited_state = 1*CoupledBasisState(
+#                                 J=self.Je, F1 = F1, F = F, mF = 0, I1 = 1/2,
+#                                 I2 = 1/2, P = (-1)**(self.Jg+1), Omega = 1, 
+#                                 electronic_state = ee
+#                                 )
+#         self.frequency = generate_transition_frequency(
+#                             self.ground_state, self.excited_state
+#                         )
+
+#     def __repr__(self):
+#         string = \
+#             f"{self.transition}({self.Jg}) F1'={Rational(self.F1)}, F'={Rational(self.F)}"
+#         # string += f' -> {self.frequency/(2*np.pi*1e9):.2f} GHz'
+#         return f"Transition({string})"
