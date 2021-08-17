@@ -10,6 +10,9 @@ from .generate_hamiltonian import *
 from . import generate_reduced_hamiltonian
 from .generate_reduced_hamiltonian import *
 
+from . import hamiltonian_terms_uncoupled
+from . import hamiltonian_B_terms_coupled
+
 __all__ = utils.__all__.copy()
 __all__ += basis_transform.__all__.copy()
 __all__ += generate_hamiltonian.__all__.copy()

@@ -418,12 +418,12 @@ class State:
         self.index -= 1
         return self.data[self.index]
 
-    def __hash__(self):
-        h = tuple(a*s.__hash__() for a,s in self)
-        return int(hashlib.md5(json.dumps(h).encode()).hexdigest(),16)
+    # def __hash__(self):
+    #     h = tuple(np.abs(a)*s.__hash__() for a,s in self)
+    #     return int(hashlib.md5(json.dumps(h).encode()).hexdigest(),16)
 
-    def __eq__(self, other):
-        return self.__hash__() == other.__hash__()
+    # def __eq__(self, other):
+    #     return self.__hash__() == other.__hash__()
     
     # direct access to a component
     def __getitem__(self, i):
