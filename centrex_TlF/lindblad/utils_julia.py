@@ -129,7 +129,7 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
     params = np.array(np.meshgrid(*values)).T.reshape(-1,len(values))
     if randomize:
         ind_random = np.random.permutation(len(params))
-    Main.params = params[ind_random]
+        Main.params = params[ind_random]
     Main.eval(f"""
     @everywhere params = $params
     @everywhere function prob_func(prob, i, repeat)
