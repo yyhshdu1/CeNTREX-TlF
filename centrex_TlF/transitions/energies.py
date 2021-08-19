@@ -5,11 +5,12 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from sympy import Rational
-from centrex_TlF.states.states import CoupledBasisState
-from centrex_TlF.states import (
+from centrex_TlF.states.states import CoupledBasisState, State
+from centrex_TlF.states.utils import (
     BasisStates_from_State,
     find_state_idx_from_state,
-    find_states_idxs_from_states
+    find_states_idxs_from_states,
+    find_closest_vector_idx
 )
 from centrex_TlF.hamiltonian import (
     generate_uncoupled_hamiltonian_X,
@@ -66,13 +67,43 @@ def calculate_energies(ground_states, excited_states, E = np.array([0,0,0]),
     return QN, H_tot
 
 def calculate_transition_frequency(state1, state2, H, QN):
-    id1 = find_state_idx_from_state(H, state1, QN)
-    id2 = find_state_idx_from_state(H, state2, QN)
+    """
+    Function that outputs the frequency of the transition between state1 and state2
+    which are assumed to be eigenstates of the Hamiltonian H whose basis is defined by
+    QN. The function does not check whether or not the transition is allowed. If state1
+    state2 are not eigenstates of H, the function will find the eigenstates with
+    maximum overlap for state1 and state2 and calculate frequency between those.
 
-    E1 = H[id1,id1].real
-    E2 = H[id2,id2].real
+    inputs:
+    state1      : State object or state vector (np.ndarray) representing the first state of interest
+    state2      : State object or state vector (np.ndarray) representing the second state of interest
+    H           : Hamiltonian that is used to calculate the energies of states 1 and 2
+                  (assumed to be in angular frequency units - 2pi*Hz)
+    QN          : List of State objects that defines the basis for the Hamiltonian
 
-    return E2-E1
+    returns:
+    freq        : Transition frequency between states 1 and 2 in Hz
+    """
+    # If provided with State objects, convert them to state vectors (np.ndarray)
+    if not isinstance(state1, np.ndarray):
+        state1 = state1.state_vector(QN)
+
+    if not isinstance(state2, np.ndarray):
+        state2 = state2.state_vector(QN)
+
+    # Diagonalize hamiltonian
+    D, V = np.linalg.eigh(H)
+    
+    # Find the indices that correspond to each state
+    i1 = find_closest_vector_idx(state1, V)
+    i2 = find_closest_vector_idx(state2, V)
+    
+    # Find energies
+    E1 = D[i1]
+    E2 = D[i2]
+    
+    # Return transitions frequency in Hz
+    return np.abs(E1-E2)/(2*np.pi)
 
 def _check_precached(state, config = None):
     if not config:
