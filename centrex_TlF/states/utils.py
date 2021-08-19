@@ -64,6 +64,25 @@ def find_state_idx_from_state(H, reference_state, QN, V_ref = None):
     
     return idx
 
+def find_closest_vector_idx(state_vec, vector_array):
+    """
+    Function that finds the index of the vector in vector_array that most closely matches
+    state_vec. vector_array is array where each column is a vector, typically corresponding to an
+    eigenstate of some Hamiltonian.
+
+    inputs:
+    state_vec = Numpy array, 1D
+    vector_array = Numpy array, 2D
+
+    returns:
+    idx = index that corresponds to closest matching vector
+    """
+
+    overlaps = np.abs(state_vec.conj().T @ vector_array)
+    idx = np.argmax(overlaps)
+
+    return idx
+
 def find_exact_states(states_approx, H, QN, V_ref = None):
     """Find closest approximate eigenstates corresponding to states_approx
 
