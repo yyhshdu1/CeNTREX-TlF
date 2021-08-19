@@ -16,7 +16,6 @@ def initialize_julia(nprocs):
         global_logger(TerminalLogger())
 
         using Distributed
-        using BenchmarkTools
     """)
 
     if Main.eval("nprocs()") < nprocs:
