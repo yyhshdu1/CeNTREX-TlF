@@ -58,7 +58,7 @@ def calculate_power_from_rabi_gaussian_beam(
     matrix element
 
     Args:
-        Ω (float): Rabi rate [2π⋅MHz]
+        Ω (float): Rabi rate [2π⋅Hz]
         main_coupling (complex): main transition matrix element
         σx (float): σx of beam
         σy (float): σy of beam
