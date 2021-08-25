@@ -71,7 +71,12 @@ class odeParameters:
         return [getattr(self, par) for par in self.parameters]
     
     def generate_p_julia(self):
-        Main.eval(f"p = {self.generate_p()}")
+        p = self.generate_p()
+        _p = np.array([])
+        for pi in p:
+            _p = np.append(_p, pi)
+
+        Main.eval(f"p = {list(_p)}")
     
     def get_index_parameter(self, par):
         return self.parameters.index(par)
@@ -82,7 +87,11 @@ class odeParameters:
             if ('Ω' in par) or ('δ' in par) or ('ω' in par):
                 rep += f"{par}: {getattr(self, par)/Γ:.2f}, "
             else:
-                rep += f"{par}: {getattr(self, par):.2f}, "
+                val = getattr(self, par)
+                if isinstance(val, (np.ndarray, list, tuple)):
+                    rep += f"{par}: {val}, "
+                else:
+                    rep += f"{par}: {getattr(self, par):.2e}, "
         rep = rep.strip(", ")
         rep += ")"
         return rep
@@ -106,6 +115,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
         pars[idx] = "params[i]"
     
     pars = "[" + ",".join(pars) + "]"
+    
     Main.params = values
     Main.eval(f"""
     @everywhere params = $params
@@ -126,9 +136,11 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
             pars[idx] = f"params[i,{idN+1}]"
     pars = "[" + ",".join(pars) + "]"
     params = np.array(np.meshgrid(*values)).T.reshape(-1,len(values))
+    Main.params = params
     if randomize:
         ind_random = np.random.permutation(len(params))
         Main.params = params[ind_random]
+
     Main.eval(f"""
     @everywhere params = $params
     @everywhere function prob_func(prob, i, repeat)
