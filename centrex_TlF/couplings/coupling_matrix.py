@@ -74,7 +74,7 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
         H = H + H.conj().T
         return H
     else:
-        return calculate_ED_ME_mixed_state(QN, ground_states, excited_states,
+        return calculate_coupling_matrix(QN, ground_states, excited_states,
                                             pol_vec, reduced, nprocs)
 
 def calculate_coupling_matrix(QN, ground_states, excited_states, 
