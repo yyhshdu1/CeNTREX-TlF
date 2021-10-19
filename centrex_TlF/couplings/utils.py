@@ -10,7 +10,7 @@ from centrex_TlF.utils import (
 )
 
 __all__ = [
-    "generate_total_hamiltonian"
+    "generate_total_hamiltonian", "select_main_states", "generate_D"
 ]
 
 def generate_sharp_superoperator(M, identity = None):
@@ -68,6 +68,23 @@ def generate_superoperator(A,B):
 
     return M_L
 
+def generate_D(H, QN, ground_main, excited_main, excited_states, Δ = 0):
+    # find transition frequency
+    ig = QN.index(ground_main)
+    ie = QN.index(excited_main)
+    ω0 = (H[ie,ie] - H[ig,ig]).real
+
+    # calculate the shift Δ = ω - ω₀
+    ω = ω0 + Δ
+
+    # shift matrix
+    D = np.zeros(H.shape, H.dtype)
+    for excited_state in excited_states:
+        idx = QN.index(excited_state)
+        D[idx,idx] -= ω
+
+    return D
+
 def generate_total_hamiltonian(H_int, QN, couplings):
     """Generate the total rotating frame Hamiltonian
 
@@ -84,7 +101,8 @@ def generate_total_hamiltonian(H_int, QN, couplings):
     for coupling in couplings:
         gnd_idx = QN.index(coupling['ground main'])
         H_rot -= np.eye(len(H_rot))*H_rot[gnd_idx,gnd_idx]
-        H_rot += coupling['D']
+        H_rot += generate_D(H_int, QN, coupling['ground main'], 
+                            coupling['excited main'], coupling['excited states'])
     return H_rot
 
 def check_transitions(transitions):
@@ -96,6 +114,37 @@ def check_transitions(transitions):
     excited_states = np.concatenate([list(zip(*es.data))[1] for es in excited_states])
     for gs in ground_states:
         assert gs not in excited_states, f"{gs} is both ground state and excited state"
+
+def select_main_states(ground_states, excited_states, polarization):
+    """Select main states for calculating the transition strength to normalize 
+    the Rabi rate with
+
+    Args:
+        ground_states (list, array): list of ground states for the transition
+        excited_states (list, array): list of excited states for the transition
+        polarization (list, array): polarization vector
+    """
+    ΔmF = 0 if polarization[2] != 0 else 1
+
+    excited_state = excited_states[len(excited_states)//2]
+    Fe = excited_state.find_largest_component().F
+    mFe = excited_state.find_largest_component().mF
+
+    Fs = np.array([gs.find_largest_component().F for gs in ground_states])
+    mFs = np.array([gs.find_largest_component().F for gs in ground_states])
+
+    if ΔmF != 0:
+        mask_F = np.abs(Fs - Fe) <= 1 
+        mask_mF = mFs - mFe == ΔmF
+    else:
+        mask_F = np.abs(Fs - Fe) == 1
+        mask_mF = mFs - mFe == ΔmF
+
+
+    mask = mask_mF & mask_F
+    ground_state = ground_states[np.where(mask)[0][0]]
+
+    return ground_state, excited_state
 
 # @dataclass
 # class Transition:
