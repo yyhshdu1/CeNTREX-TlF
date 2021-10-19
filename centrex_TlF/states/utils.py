@@ -102,6 +102,15 @@ def find_exact_states(states_approx, H, QN, V_ref = None):
     return states
 
 def check_approx_state_exact_state(approx, exact):
+    """Check if the exact found states match the approximate states. The exact
+    states are found from the eigenvectors of the hamiltonian and are often a 
+    superposition of various states.
+    The approximate states are used in initial setup of the hamiltonian.
+
+    Args:
+        approx (State): approximate state
+        exact (State): exact state
+    """
     approx = approx.find_largest_component()
     exact = exact.find_largest_component()
 
