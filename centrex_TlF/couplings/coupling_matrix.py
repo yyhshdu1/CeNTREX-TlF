@@ -155,6 +155,11 @@ def generate_coupling_field(ground_main_approx, excited_main_approx,
     ME_main = generate_ED_ME_mixed_state(
                         excited_main, ground_main, pol_vec = pol_main)
 
+    assert_transition_coupled_allowed(
+        ground_main.find_largest_component(),
+        excited_main.find_largest_component(),
+        ΔmF_allowed = 0 if pol_main[2] != 0 else 1
+    )
     assert_msg = f"main coupling element small, {ME_main:.2e}" + \
                   ", check states and/or polarization"
     assert np.abs(ME_main) > 1e-2, assert_msg
@@ -206,7 +211,11 @@ def calculate_coupling_field(ground_main_approx, excited_main_approx,
     check_approx_state_exact_state(excited_main_approx, excited_main)
     ME_main = calculate_ED_ME_mixed_state(
                         excited_main, ground_main, pol_vec = pol_main)
-
+    assert_transition_coupled_allowed(
+        ground_main.find_largest_component(),
+        excited_main.find_largest_component(),
+        ΔmF_allowed = 0 if pol_main[2] != 0 else 1
+    )
     assert_msg = f"main coupling element small, {ME_main:.2e}" + \
                   ", check states and/or polarization"
     assert np.abs(ME_main) > 1e-2, assert_msg
