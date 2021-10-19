@@ -93,8 +93,8 @@ def generate_thermal_J(Js, n_excited, T, normalized = True,
     return ρ
 
 def generate_population_states(states, levels):
-    """generate a population distribution with population in the specified 
-    states
+    """generate a uniform population distribution with population in the 
+    specified states
 
     Args:
         states (list, np.ndarray): indices to put population into
