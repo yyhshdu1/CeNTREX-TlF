@@ -16,7 +16,9 @@ from centrex_TlF.states.utils import (
 from centrex_TlF.couplings.utils import (
     select_main_states, generate_D
 )
-
+from centrex_TlF.transitions.utils import (
+    assert_transition_coupled_allowed
+)
 __all__ = [
     'calculate_coupling_matrix', 'generate_coupling_field',
     'generate_coupling_matrix', 'calculate_coupling_field', 
@@ -294,7 +296,11 @@ def generate_coupling_field_automatic(
     check_approx_state_exact_state(excited_main_approx, excited_main)
     ME_main = generate_ED_ME_mixed_state(
                         excited_main, ground_main, pol_vec = pol_main)
-
+    assert_transition_coupled_allowed(
+        ground_main.find_largest_component(),
+        excited_main.find_largest_component(),
+        ΔmF_allowed = 0 if pol_main[2] != 0 else 1
+    )
     assert_msg = f"main coupling element small, {ME_main:.2e}" + \
                   ", check states and/or polarization"
     assert np.abs(ME_main) > 1e-2, assert_msg
@@ -378,6 +384,11 @@ def calculate_coupling_field_automatic(
 
     check_approx_state_exact_state(ground_main_approx, ground_main)
     check_approx_state_exact_state(excited_main_approx, excited_main)
+    assert_transition_coupled_allowed(
+        ground_main.find_largest_component(),
+        excited_main.find_largest_component(),
+        ΔmF_allowed = 0 if pol_main[2] != 0 else 1
+    )
     ME_main = calculate_ED_ME_mixed_state(
                         excited_main, ground_main, pol_vec = pol_main)
 

@@ -8,6 +8,9 @@ from centrex_TlF.utils import (
     calculate_power_from_rabi_gaussian_beam,
     calculate_rabi_from_power_gaussian_beam
 )
+from centrex_TlF.transitions.utils import (
+    check_transition_coupled_allowed
+)
 
 __all__ = [
     "generate_total_hamiltonian", "select_main_states", "generate_D"
@@ -126,23 +129,20 @@ def select_main_states(ground_states, excited_states, polarization):
     """
     ΔmF = 0 if polarization[2] != 0 else 1
 
-    excited_state = excited_states[len(excited_states)//2]
-    Fe = excited_state.find_largest_component().F
-    mFe = excited_state.find_largest_component().mF
+    allowed_transitions = []
+    for ide, exc in enumerate(excited_states):
+        exc = exc.find_largest_component()
+        for idg, gnd in enumerate(ground_states):
+            gnd = gnd.find_largest_component()
+            if check_transition_coupled_allowed(gnd, exc, ΔmF, return_err = False):
+                allowed_transitions.append(
+                    (idg, ide, exc.mF)
+                )
 
-    Fs = np.array([gs.find_largest_component().F for gs in ground_states])
-    mFs = np.array([gs.find_largest_component().F for gs in ground_states])
+    assert len(allowed_transitions) > 0, "none of the supplied ground and excited states have allowed transitions"
 
-    if ΔmF != 0:
-        mask_F = np.abs(Fs - Fe) <= 1 
-        mask_mF = mFs - mFe == ΔmF
-    else:
-        mask_F = np.abs(Fs - Fe) == 1
-        mask_mF = mFs - mFe == ΔmF
-
-
-    mask = mask_mF & mask_F
-    ground_state = ground_states[np.where(mask)[0][0]]
+    excited_state = excited_states[allowed_transitions[0][1]]
+    ground_state = ground_states[allowed_transitions[0][0]]
 
     return ground_state, excited_state
 
