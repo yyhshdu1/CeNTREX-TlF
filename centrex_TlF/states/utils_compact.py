@@ -59,7 +59,7 @@ def compact_QN_coupled_indices(QN, indices_compact):
     F1s = np.unique([slc(s).F1 for s in QNc if slc(s).F1 is not None])
     Fs = np.unique([slc(s).F for s in QNc if slc(s).F is not None])
     mFs = np.unique([slc(s).mF for s in QNc if slc(s).mF is not None])
-    Ps = np.unique([slc(s).mF for s in QNc if slc(s).P is not None])
+    Ps = np.unique([slc(s).P for s in QNc if slc(s).P is not None])
 
     QNcompact = [qn for idx, qn in enumerate(QN) if idx not in indices_compact[1:]]
 
