@@ -1,14 +1,18 @@
+import copy
 import numpy as np
 from tqdm import tqdm
 from centrex_TlF.couplings.branching import calculate_BR
 from centrex_TlF.couplings.utils_compact import (
-    compact_C_array
+    compact_C_array, compact_C_array_indices
+)
+from centrex_TlF.states.utils_compact import (
+    compact_QN_coupled_indices, find_indices_to_compact_coupled
 )
 __all__ = [
     'collapse_matrices'
 ]
 def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
-                        progress = False, slice_compact = None):
+                        progress = False, slice_compact = None, qn_compact = None):
     """
     Function that generates the collapse matrix for given ground and excited states
 
@@ -45,5 +49,10 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
 
     if slice_compact:
         C_array = compact_C_array(C_array, gamma, slice_compact)
-
+    elif qn_compact:
+        QN_compact = copy.deepcopy(QN)        
+        for qnc in qn_compact:
+            indices_compact = find_indices_to_compact_coupled(qnc, QN_compact)
+            QN_compact = compact_QN_coupled_indices(QN_compact, indices_compact)
+            C_array = compact_C_array_indices(C_array, gamma, indices_compact)
     return C_array

@@ -1,15 +1,19 @@
+import copy
 import logging
 import numpy as np
 from sympy import zeros, Symbol
 from centrex_TlF.couplings import (
     generate_total_hamiltonian
 )
+from centrex_TlF.states.utils_compact import (
+    compact_QN_coupled_indices, find_indices_to_compact_coupled
+)
 from centrex_TlF.lindblad.utils_compact import (
-    delete_row_column_symbolic
+    compact_symbolic_hamiltonian_indices, delete_row_column_symbolic
 )
 __all__ = [
     'generate_symbolic_hamiltonian', 'generate_symbolic_detunings', \
-    'generate_total_symbolic_hamiltonian'
+    'generate_total_symbolic_hamiltonian',
 ]
 
 def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
@@ -106,7 +110,28 @@ def generate_symbolic_detunings(n_states, detunings):
     return detuning, symbols
 
 def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
-                                        slice_compact = None):
+                                        slice_compact = None, qn_compact = None):
+    """Generate the total symbolic hamiltonian for the given system
+
+    Args:
+        QN (list): states
+        H_int (array): internal hamiltonian
+        couplings (list): list of dictionaries with all couplings of the system
+        transitions (list): list of dictionaries with all transitions of the 
+                            system
+        slice_compact (slice operator, optional): numpy slice operator for which 
+                                                    part of the system to compact 
+                                                    to a single state. 
+                                                    Defaults to None.
+        qn_compact (list, optional): list of dicts with each dict containing the 
+                                        quantum numbers to compact into a single 
+                                        state. Defaults to None.
+
+    Returns:
+        sympy matrix: symbolic hamiltonian
+        if qn_compact is provided, also returns the states corresponding to the 
+        compacted hamiltonian, i.e. ham, QN_compact
+    """
     H_rot = generate_total_hamiltonian(H_int, QN, couplings)
     Ωs = [t.get('Ω symbol') for t in transitions]
     Δs = [t.get('Δ symbol') for t in transitions]
@@ -124,5 +149,12 @@ def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
 
     if slice_compact:
         H_symbolic = delete_row_column_symbolic(H_symbolic, slice_compact)
+    elif qn_compact:
+        QN_compact = copy.deepcopy(QN)
+        for qnc in qn_compact:
+            indices_compact = find_indices_to_compact_coupled(qnc, QN_compact)
+            QN_compact = compact_QN_coupled_indices(QN_compact, indices_compact)
+            H_symbolic = compact_symbolic_hamiltonian_indices(H_symbolic, indices_compact)
+        return H_symbolic, QN_compact
 
     return H_symbolic
