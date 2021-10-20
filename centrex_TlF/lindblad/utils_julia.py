@@ -1,5 +1,6 @@
 import numpy as np
 from julia import Main
+from pathlib import Path
 
 __all__ = [
     'initialize_julia', 'generate_ode_fun_julia', 'setup_variables_julia',
@@ -33,6 +34,10 @@ def initialize_julia(nprocs):
             using DifferentialEquations
         end
     """)
+    # loading common julia functions from julia_common.jl
+    path = Path(__file__).parent / "julia_common.jl"
+    Main.eval(f'include(raw"{path}")')
+
     print(f"Initialized Julia with {nprocs} processes")
 
 def generate_ode_fun_julia(preamble, code_lines):
