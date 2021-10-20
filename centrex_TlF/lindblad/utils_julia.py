@@ -189,11 +189,34 @@ def setup_initial_condition_scan(values):
     end
     """)
 
-def setup_state_integral_calculation(states):
-    Main.eval(f"""
-    @everywhere function output_func(sol,i)
-        return trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
-    end""")
+def setup_state_integral_calculation(states, nphotons = False, Γ = None):
+    """Setup an integration output_function for an EnsembleProblem. 
+    Uses trapezoidal integration to integrate the states.
+    
+    Args:
+        states (list): list of state indices to integrate
+        nphotons (bool, optional): flag to calculate the number of photons, 
+                                    e.g. normalize with Γ
+        Γ (float, optional): decay rate in 2π Hz (rad/s), not necessary if already
+                                loaded into Julia globals
+    """
+    if nphotons & Main.eval("@isdefined Γ"):
+        Main.eval(f"""
+        @everywhere function output_func(sol,i)
+            return Γ.*trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
+        end""")
+    else:
+        if nphotons:
+            assert Γ is not None, "Γ not defined as a global in Julia and not supplied to function"
+            Main.eval(f"""
+            @everywhere function output_func(sol,i)
+                return {Γ}.*trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
+            end""")
+        else:
+            Main.eval(f"""
+            @everywhere function output_func(sol,i)
+                return trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
+            end""")
 
 def get_indices_diag_flattened(n):
     return np.diag(np.arange(0,n*n).reshape(-1,n))
