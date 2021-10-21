@@ -5,8 +5,11 @@ from sympy import zeros, Symbol
 from centrex_TlF.couplings import (
     generate_total_hamiltonian
 )
+from centrex_TlF.states.utils import (
+    get_indices_quantumnumbers
+)
 from centrex_TlF.states.utils_compact import (
-    compact_QN_coupled_indices, find_indices_to_compact_coupled
+    compact_QN_coupled_indices
 )
 from centrex_TlF.lindblad.utils_compact import (
     compact_symbolic_hamiltonian_indices, delete_row_column_symbolic
@@ -123,9 +126,11 @@ def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
                                                     part of the system to compact 
                                                     to a single state. 
                                                     Defaults to None.
-        qn_compact (list, optional): list of dicts with each dict containing the 
-                                        quantum numbers to compact into a single 
-                                        state. Defaults to None.
+        qn_compact (list, optional): list of QuantumSelectors or lists of
+                                    QuantumSelectors with each 
+                                    QuantumSelector containing the quantum 
+                                    numbers to compact into a single state. 
+                                    Defaults to None.
 
     Returns:
         sympy matrix: symbolic hamiltonian
@@ -152,7 +157,7 @@ def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
     elif qn_compact:
         QN_compact = copy.deepcopy(QN)
         for qnc in qn_compact:
-            indices_compact = find_indices_to_compact_coupled(qnc, QN_compact)
+            indices_compact = get_indices_quantumnumbers(qnc, QN_compact)
             QN_compact = compact_QN_coupled_indices(QN_compact, indices_compact)
             H_symbolic = compact_symbolic_hamiltonian_indices(H_symbolic, indices_compact)
         return H_symbolic, QN_compact

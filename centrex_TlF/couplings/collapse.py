@@ -5,8 +5,11 @@ from centrex_TlF.couplings.branching import calculate_BR
 from centrex_TlF.couplings.utils_compact import (
     compact_C_array, compact_C_array_indices
 )
+from centrex_TlF.states.utils import (
+    get_indices_quantumnumbers
+)
 from centrex_TlF.states.utils_compact import (
-    compact_QN_coupled_indices, find_indices_to_compact_coupled
+    compact_QN_coupled_indices
 )
 __all__ = [
     'collapse_matrices'
@@ -22,6 +25,11 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
     excited_states = list of excited states that are coupled to the ground states
     gamma = decay rate of excited states
     tol = couplings smaller than tol/sqrt(gamma) are set to zero to speed up computation
+    progress = boolean flag to display a tqdm progress bar
+    slice_compact = np._s of indices to compact into one state
+    qn_compact = list of QuantumSelectors or lists of QuantumSelectors with each 
+                QuantumSelector containing the quantum numbers to compact into a 
+                single state. Defaults to None.
 
     outputs:
     C_list = array of collapse matrices
@@ -52,7 +60,7 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
     elif qn_compact:
         QN_compact = copy.deepcopy(QN)        
         for qnc in qn_compact:
-            indices_compact = find_indices_to_compact_coupled(qnc, QN_compact)
+            indices_compact = get_indices_quantumnumbers(qnc, QN_compact)
             QN_compact = compact_QN_coupled_indices(QN_compact, indices_compact)
             C_array = compact_C_array_indices(C_array, gamma, indices_compact)
     return C_array

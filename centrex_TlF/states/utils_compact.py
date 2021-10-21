@@ -4,42 +4,6 @@ __all__ = [
     ''
 ]
 
-def find_indices_to_compact_coupled(qn_compact, QN):
-    """get the indices corresponding to the quantum numbers to compact into a
-    single state for simulation purposes; e.g. for a J level which the excited
-    state only decays into
-
-    Args:
-        qn_compact (dict): dict containing the quantum numbers to compact into a 
-                            single state. J and the electronic state are 
-                            required, F1 and F are optional
-        QN (list): list of states in the simulation; required to be in the same 
-                    order as the hamiltonian
-
-    Returns:
-        [list]: list of indices corresponding to each dict in qns
-    """
-    Js = np.array([s.find_largest_component().J for s in QN])
-    F1s = np.array([s.find_largest_component().F1 for s in QN])
-    Fs = np.array([s.find_largest_component().F for s in QN])
-    estates = np.array([s.find_largest_component().electronic_state for s in QN])
-    
-    mask_all = np.ones(len(QN), dtype = bool)
-
-    # get the quantum numbers for each part to compact
-    J = qn_compact.get('J')
-    F1 = qn_compact.get('F1')
-    F = qn_compact.get('F')
-    estate = qn_compact.get("electronic state")
-    assert estate is not None, "supply the electronic state to compact"
-    # generate the masks for states in QN where the conditions are met
-    mask_J = Js == J if J is not None else mask_all
-    mask_F1 = F1s == F1 if F1 is not None else mask_all
-    mask_F = Fs == F if F is not None else mask_all
-    mask_es = estates == estate if estate is not None else np.zeros(len(QN), dtype == bool)
-    # get the indices of the states in QN to compact
-    return np.where(mask_J & mask_F1 & mask_F & mask_es)[0]
-
 
 def compact_QN_coupled_indices(QN, indices_compact):
     """Compact the states given by indices in indices_compact

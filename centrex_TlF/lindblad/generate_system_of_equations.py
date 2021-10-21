@@ -41,7 +41,7 @@ def generate_system_of_equations_symbolic(hamiltonian, C_array, progress = False
 
     a = -0.5 * (Cprecalc@ρ + ρ@Cprecalc)
     b = -1j*(hamiltonian@ρ - ρ@hamiltonian)
- 
+
     if split_output:
         return b, matrix_mult_sum + a
     else:
