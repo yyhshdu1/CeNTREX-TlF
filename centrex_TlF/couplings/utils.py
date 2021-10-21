@@ -1,6 +1,7 @@
 import numpy as np
 from sympy import Symbol
 import scipy.constants as cst
+from typing import Union
 # from centrex_TlF import State
 from dataclasses import dataclass
 from scipy.sparse import kron, eye
@@ -13,7 +14,8 @@ from centrex_TlF.transitions.utils import (
 )
 
 __all__ = [
-    "generate_total_hamiltonian", "select_main_states", "generate_D"
+    "generate_total_hamiltonian", "select_main_states", "generate_D",
+    'TransitionSelector'
 ]
 
 def generate_sharp_superoperator(M, identity = None):
@@ -146,19 +148,17 @@ def select_main_states(ground_states, excited_states, polarization):
 
     return ground_state, excited_state
 
-# @dataclass
-# class Transition:
-#     ground: State
-#     excited: State
-#     ground_states: np.ndarray
-#     excited_states: np.ndarray
-#     main_polarization: np.ndarray
-#     polarizations: list
-#     polarization_symbols: list
-#     Ω: Symbol
-#     δ: Symbol
-#     description: str
-#     type: str
+@dataclass
+class TransitionSelector:
+    ground: Union[list, np.ndarray]
+    excited: Union[list, np.ndarray]
+    main_polarization: Union[list, np.ndarray]
+    polarizations: Union[list, np.ndarray]
+    polarization_symbols: Union[list, np.ndarray]
+    Ω: Symbol
+    δ: Symbol
+    description: str = None
+    type: str = None
 
 # @dataclass
 # class Coupling:
