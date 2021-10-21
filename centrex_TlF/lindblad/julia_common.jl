@@ -29,4 +29,17 @@ using Waveforms
     function square_wave(t::Float64, ω::Float64, phase::Float64)::Float64
         0.5.*(1 .+ squarewave(ω.*t .+ phase))
     end
+
+    """
+        multipass_2d_intensity(x::Float64, y::Float64, amplitudes::Vector{Float64}, xlocs::Vector{Float64}, ylocs::Vector{Float64}, σx::Float64, σy::Float64)::Float64
+
+    generate a multipass with 2D gaussian intensity profiles for each pass
+    """
+    function multipass_2d_intensity(x::Float64, y::Float64, amplitudes::Vector{Float64}, xlocs::Vector{Float64}, ylocs::Vector{Float64}, σx::Float64, σy::Float64)::Float64
+        intensity::Float64 = 0.0
+        for i = 1:length(amplitudes::Vector{Float64})
+            @inbounds intensity += gaussian_2d(x,y,amplitudes[i],xlocs[i],ylocs[i], σx,σy)
+        end
+        return intensity
+    end
 end
