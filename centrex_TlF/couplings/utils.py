@@ -152,7 +152,6 @@ def select_main_states(ground_states, excited_states, polarization):
 class TransitionSelector:
     ground: Union[list, np.ndarray]
     excited: Union[list, np.ndarray]
-    main_polarization: Union[list, np.ndarray]
     polarizations: Union[list, np.ndarray]
     polarization_symbols: Union[list, np.ndarray]
     Ω: Symbol
