@@ -106,7 +106,7 @@ def generate_total_hamiltonian(H_int, QN, couplings):
     for coupling in couplings:
         gnd_idx = QN.index(coupling['ground main'])
         H_rot -= np.eye(len(H_rot))*H_rot[gnd_idx,gnd_idx]
-        H_rot += generate_D(H_int, QN, coupling['ground main'], 
+        H_rot += generate_D(H_rot, QN, coupling['ground main'], 
                             coupling['excited main'], coupling['excited states'])
     return H_rot
 
