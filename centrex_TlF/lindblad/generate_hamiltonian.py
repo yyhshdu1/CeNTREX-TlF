@@ -17,6 +17,7 @@ from centrex_TlF.lindblad.utils_compact import (
 __all__ = [
     'generate_symbolic_hamiltonian', 'generate_symbolic_detunings', \
     'generate_total_symbolic_hamiltonian',
+    'generate_total_symbolic_hamiltonian_new'
 ]
 
 def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
@@ -54,17 +55,16 @@ def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
                     break
             Ωs[idc] = Ω
         main_coupling = coupling['main coupling']
-        for field in coupling['fields']:
+        for idf, field in enumerate(coupling['fields']):
             if pols:
                 P = pols[idc]
                 if P:
-                    P = P[tuple(field['pol'])]
+                    P = P[idf]
                     hamiltonian += (P*Ω/main_coupling)/2 * field['field']
                 else:
                     hamiltonian += (Ω/main_coupling)/2 * field['field'] 
             else:
                 hamiltonian += (Ω/main_coupling)/2 * field['field']
-
     # add detunings to the hamiltonian
     for idc, (Δ, coupling) in enumerate(zip(Δs, couplings)):
         # check if Δ symbol exists, else create
@@ -145,9 +145,7 @@ def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
         if not transition.get('polarization symbols'):
             pols.append(None)
         else:
-            _ = {tuple(p): ps for p, ps in  zip(transition['polarizations'], 
-                                        transition['polarization symbols'])}
-            pols.append(_)
+            pols.append(transition['polarization symbols'])
 
     H_symbolic = generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs, Δs, 
                                                                         pols)
