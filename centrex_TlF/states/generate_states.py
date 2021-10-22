@@ -75,15 +75,15 @@ def generate_coupled_states_base(qn_selector: QuantumSelector) -> np.ndarray:
             F1_allowed = np.arange(np.abs(J-I_F),J+I_F+1)
             F1sl = F1s if F1s[0] is not None else F1_allowed
             for F1 in F1sl:
-                if F1 not in F1_allowed: break
+                if F1 not in F1_allowed: continue
                 Fs_allowed = np.arange(np.abs(F1-I_Tl),F1+I_Tl+1)
                 Fsl = Fs if Fs[0] is not None else Fs_allowed
                 for F in Fsl:
-                    if F not in Fs_allowed: break
+                    if F not in Fs_allowed: continue
                     mF_allowed = np.arange(-F,F+1)
                     mFsl = mFs if mFs[0] is not None else mF_allowed
                     for mF in mFsl:
-                        if mF not in mF_allowed: break
+                        if mF not in mF_allowed: continue
                         for P in Ps:
                             P = P if not callable(P) else P(J)
                             for Ω in Ωs:
