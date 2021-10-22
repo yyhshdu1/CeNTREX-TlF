@@ -197,7 +197,7 @@ def get_indices_quantumnumbers_base(qn_selector: QuantumSelector, QN: Union[list
         mFs = np.array([s.mF for s in QN])
         estates = np.array([s.electronic_state for s in QN])
     else:
-        raise AssertionError("select_qn() only supports State and CoupledBasisState types the States list or array")
+        raise AssertionError("get_indices_quantumnumbers_base() only supports State and CoupledBasisState types the States list or array")
 
     J = qn_selector.J
     F1 = qn_selector.F1
