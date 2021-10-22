@@ -16,8 +16,7 @@ from centrex_TlF.lindblad.utils_compact import (
 )
 __all__ = [
     'generate_symbolic_hamiltonian', 'generate_symbolic_detunings', \
-    'generate_total_symbolic_hamiltonian',
-    'generate_total_symbolic_hamiltonian_new'
+    'generate_total_symbolic_hamiltonian'
 ]
 
 def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
