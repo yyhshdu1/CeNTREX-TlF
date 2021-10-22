@@ -467,7 +467,7 @@ class State:
     
     #Function that displays the state as a sum of the basis states
     def print_state(self, tol = 0.1, probabilities = False):
-         for amp, basis_state in self.data:
+        for amp, basis_state in self.data:
             if np.abs(amp) > tol:
                 if probabilities:
                     amp = np.abs(amp)**2
@@ -475,7 +475,7 @@ class State:
                 string = basis_state.print_quantum_numbers(printing = False)
                 string = '{:.4f}'.format(complex(amp))+' x '+ string
                 print(string)
-                 
+
     #Function that returns state vector in given basis  
     def state_vector(self,QN):
         state_vector = [1*state @ self for state in QN]

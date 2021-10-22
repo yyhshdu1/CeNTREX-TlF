@@ -23,7 +23,7 @@ def multi_system_of_equations_to_lines(system, ρ, idx):
                 cline = cline.strip()
                 code_lines.append(cline)
             else:
-               if system[idx,idy] != 0:
+                if system[idx,idy] != 0:
                     cline = f"du[{idx+1},{idy+1}] = conj(du[{idy+1},{idx+1}])"
                     code_lines.append(cline)       
     return code_lines
