@@ -1,13 +1,21 @@
 import numpy as np
+import sympy as smp
 from julia import Main
 from pathlib import Path
+from sympy import Symbol
+from dataclasses import dataclass
+from collections import OrderedDict
+from typing import Union, SupportsFloat
+
+NumberType = type(SupportsFloat)
+
 
 __all__ = [
     'initialize_julia', 'generate_ode_fun_julia', 'setup_variables_julia',
     'odeParameters', 'setup_parameter_scan_1D', 'setup_ratio_calculation',
     'setup_initial_condition_scan', 'setup_state_integral_calculation',
     'get_indices_diag_flattened', 'setup_parameter_scan_ND', 
-    "handle_randomized_ensemble_solution"
+    "handle_randomized_ensemble_solution", "generate_preamble"
 ]
 
 def initialize_julia(nprocs):
@@ -61,53 +69,132 @@ def setup_variables_julia(Γ, ρ, vars = None):
         for key, val in vars.items():
             Main.eval(f"@everywhere {key} = {val}")
 
-class odeParameters:
-    def __init__(self, parameters):
-        self.parameters = parameters
+@dataclass
+class OdeParameter:
+    var: str
+    val: Union[NumberType, str]
 
-        self._generate_attrs()
-        self.p = []
+class odeParameters:
+    def __init__(self, *args, **kwargs):
+        # if elif statement is for legacy support, where a list of parameters was supplied
+        if len(args) > 1:
+            raise AssertionError("For legacy support supply a list of strings, one for each parameter")
+        elif len(args) == 1:
+            assert isinstance(args[0][0], str), "For legacy support supply a list of strings, one for each parameter"
+            kwargs = {par: 0 for par in args[0]}
+            odeParameters(**kwargs)
+        
+        self._parameters = [key for key,val in kwargs.items() if not isinstance(val, str)]
+        self._compound_vars = [key for key,val in kwargs.items() if isinstance(val, str)]
+        
+        for key,val in kwargs.items():
+            # OdeParameter(ϕ = 'ϕ') results in different unicode representation
+            # replace the rhs with the rep. used on the lhs
+            if isinstance(val, str):
+                val = val.replace("\u03d5", "\u03c6")
+            setattr(self, key, val)
+        
+        self._order_compound_vars()
+        self.check_symbols_defined()
     
-    def _generate_attrs(self):
-        for par in self.parameters:
-            setattr(self, par, 0)
+    
+    def __setattr__(self, name, value):
+        if name in ['_parameters', '_compound_vars']:
+            super(odeParameters, self).__setattr__(name, value)
+        elif name in self._parameters or self._compound_vars:
+            super(odeParameters, self).__setattr__(name, OdeParameter(name, value))
+        else:
+            raise AssertionError("Cannot instantiate new parameter on initialized OdeParameters object")
+    
+    def _get_defined_symbols(self):
+        symbols_defined = [par for par,val in self.__dict__.items() if isinstance(val, OdeParameter)]
+        symbols_defined += ['t']
+        symbols_defined = set([Symbol(s) for s in symbols_defined])
+        return symbols_defined
+    
+    def _get_numerical_symbols(self):
+        symbols_numerical = [par for par,val in self.__dict__.items() if isinstance(val, OdeParameter)
+                            if not isinstance(val.val, str)]
+        symbols_numerical += ['t']
+        symbols_numerical = set([Symbol(s) for s in symbols_numerical])
+        return symbols_numerical
+    
+    def _get_expression_symbols(self):
+        symbols_expressions = [smp.parsing.sympy_parser.parse_expr(val.val) for val in self.__dict__.values()
+                               if (isinstance(val, OdeParameter) and isinstance(val.val, str))]
+        symbols_expressions = set().union(*[s.free_symbols for s in symbols_expressions])
+        return symbols_expressions
+    
+    def check_symbols_defined(self):
+        symbols_defined = self._get_defined_symbols()
+        symbols_expressions = self._get_expression_symbols()
+        
+        warn_flag = False
+        warn_string = f"Symbol(s) not defined: "
+        for se in symbols_expressions:
+            if se not in symbols_defined:
+                warn_flag = True
+                warn_string += f"{se}, "
+        if warn_flag:
+            raise AssertionError(warn_string.strip(' ,'))
             
-    def generate_p(self):
-        return [getattr(self, par) for par in self.parameters]
+    def _order_compound_vars(self):
+        symbols_num = self._get_numerical_symbols()
+        unordered = list(self._compound_vars)
+        ordered = []
+
+        while len(unordered) != 0:
+            for compound in unordered:
+                if compound not in ordered:
+                    symbols = smp.parsing.sympy_parser.parse_expr(getattr(self, compound).val).free_symbols
+                    m = [True if (s in symbols_num) or (str(s) in ordered) else False for s in symbols]
+                    if all(m):
+                        ordered.append(compound)
+            unordered = [val for val in unordered if val not in ordered]
+        self._compound_vars = ordered
+            
+    def _get_index_parameter(self, parameter, mode = 'python'):
+        # OdeParameter(ϕ = 'ϕ') results in different unicode representation
+        # replace the rhs with the rep. used on the lhs
+        parameter = parameter.replace("\u03d5", "\u03c6")
+        if mode == 'python':
+            return self._parameters.index(parameter)
+        elif mode == 'julia':
+            return self._parameters.index(parameter)+1
+    
+    @property
+    def p(self):
+        return [getattr(self, p).val for p in self._parameters]
+        
+        
+    def get_index_parameter(self, parameter, mode = 'python'):
+        if isinstance(parameter, str):
+            return self._get_index_parameter(parameter, mode)
+        elif isinstance(parameter, (list, np.ndarray)):
+            return [self._get_index_parameter(par, mode) for par in parameter]
+        
+    def check_transition_symbols(self, transitions):
+        to_check = ('Ω', 'δ')
+        symbols_defined = [str(s) for s in self._get_defined_symbols()]
+        not_defined = []
+        for transition in transitions:
+            for var in to_check:
+                var = str(getattr(transition,var))
+                if var is not None: 
+                    if var not in symbols_defined:
+                        not_defined.append(var)
+        if len(not_defined) > 0:
+            not_defined = set([str(s) for s in not_defined])
+            raise AssertionError(f"Symbol(s) from transitions not defined: {', '.join(not_defined)}")
     
     def generate_p_julia(self):
-        p = self.generate_p()
-        _p = np.array([])
-        for pi in p:
-            _p = np.append(_p, pi)
-
-        Main.eval(f"p = {list(_p)}")
-    
-    def get_index_parameter(self, par):
-        return self.parameters.index(par)
-
-    def to_units_Γ(self, Γ):
-        rep = "odeParameters("
-        for par in self.parameters:
-            if ('Ω' in par) or ('δ' in par) or ('ω' in par):
-                rep += f"{par}: {getattr(self, par)/Γ:.2f}, "
-            else:
-                val = getattr(self, par)
-                if isinstance(val, (np.ndarray, list, tuple)):
-                    rep += f"{par}: {val}, "
-                else:
-                    rep += f"{par}: {getattr(self, par):.2e}, "
-        rep = rep.strip(", ")
-        rep += ")"
-        return rep
+        Main.eval(f"p = {self.p}")
     
     def __repr__(self):
-        rep = "odeParameters("
-        for par in self.parameters:
-            rep += f"{par}: {getattr(self, par):.2e}, "
-        rep = rep.strip(", ")
-        rep += ")"
-        return rep
+        rep = f"OdeParameters("
+        for par in self._parameters:
+            rep += f"{par}={getattr(self, par).val}, "
+        return rep.strip(", ") + ")"
 
 def setup_parameter_scan_1D(odePar, parameter, values):
     if isinstance(parameter, (list, tuple)):
@@ -154,6 +241,24 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
     """)
     if randomize:
         return ind_random
+
+def generate_preamble(odepars: odeParameters, transitions: list) -> str:
+    # check if the symbols in transitions are defined by odepars
+    odepars.check_transition_symbols(transitions)
+    preamble = """function Lindblad_rhs!(du, ρ, p, t)
+    \t@inbounds begin
+    """
+    for idp, par in enumerate(odepars._parameters):
+        preamble += f"\t\t{par} = p[{idp+1}]\n"
+    for par in odepars._compound_vars:
+        preamble += f"\t\t{par} = {getattr(odepars, par).val}\n"
+        
+    for transition in transitions:
+        preamble += f"\t\t{transition.Ω}ᶜ = conj({transition.Ω})\n"
+        
+    # remove duplicate lines (if multiple transitions have the same Rabi rate symbol or detuning
+    preamble = "\n".join(list(OrderedDict.fromkeys(preamble.split("\n"))))
+    return preamble
 
 def setup_ratio_calculation(states):
     cmd = ""
