@@ -32,7 +32,7 @@ def generate_sharp_superoperator(M, identity = None):
     """
 
     if identity == None:
-         identity = eye(M.shape[0], format = 'coo')
+        identity = eye(M.shape[0], format = 'coo')
 
     M_L = kron(M.T,identity, format = 'csr')
 
