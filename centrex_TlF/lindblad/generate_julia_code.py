@@ -29,7 +29,7 @@ def system_of_equations_to_lines(system, nprocs = 1):
                     cline = cline.replace("I", "1im")
                     cline += '\n'
                     for i in range(system.shape[0]):
-                        for j in range(i, system.shape[1]):
+                        for j in range(system.shape[1]):
                             _ = str(ρ[i,j])
                             cline = cline.replace(_+"*", f"ρ[{i+1},{j+1}]*")
                             cline = cline.replace(_+" ", f"ρ[{i+1},{j+1}] ")
