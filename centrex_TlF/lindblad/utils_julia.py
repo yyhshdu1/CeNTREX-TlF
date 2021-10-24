@@ -3,11 +3,7 @@ import sympy as smp
 from julia import Main
 from pathlib import Path
 from sympy import Symbol
-from dataclasses import dataclass
 from collections import OrderedDict
-from typing import Union, SupportsFloat
-
-NumberType = type(SupportsFloat)
 
 
 __all__ = [
@@ -69,11 +65,6 @@ def setup_variables_julia(Γ, ρ, vars = None):
         for key, val in vars.items():
             Main.eval(f"@everywhere {key} = {val}")
 
-@dataclass
-class OdeParameter:
-    var: str
-    val: Union[NumberType, str]
-
 class odeParameters:
     def __init__(self, *args, **kwargs):
         # if elif statement is for legacy support, where a list of parameters was supplied
@@ -88,7 +79,7 @@ class odeParameters:
         self._compound_vars = [key for key,val in kwargs.items() if isinstance(val, str)]
         
         for key,val in kwargs.items():
-            # OdeParameter(ϕ = 'ϕ') results in different unicode representation
+            # ϕ = 'ϕ') results in different unicode representation
             # replace the rhs with the rep. used on the lhs
             if isinstance(val, str):
                 val = val.replace("\u03d5", "\u03c6")
@@ -101,27 +92,30 @@ class odeParameters:
     def __setattr__(self, name, value):
         if name in ['_parameters', '_compound_vars']:
             super(odeParameters, self).__setattr__(name, value)
-        elif name in self._parameters or self._compound_vars:
-            super(odeParameters, self).__setattr__(name, OdeParameter(name, value))
+        elif name in self._parameters:
+            assert not isinstance(value, str), "Cannot change parameter from numeric to str"
+            super(odeParameters, self).__setattr__(name, value)
+        elif name in self._compound_vars:
+            assert isinstance(value, str), "Cannot change parameter from str to numeric"
+            super(odeParameters, self).__setattr__(name, value)
         else:
             raise AssertionError("Cannot instantiate new parameter on initialized OdeParameters object")
     
     def _get_defined_symbols(self):
-        symbols_defined = [par for par,val in self.__dict__.items() if isinstance(val, OdeParameter)]
+        symbols_defined = self._parameters + self._compound_vars
         symbols_defined += ['t']
         symbols_defined = set([Symbol(s) for s in symbols_defined])
         return symbols_defined
     
     def _get_numerical_symbols(self):
-        symbols_numerical = [par for par,val in self.__dict__.items() if isinstance(val, OdeParameter)
-                            if not isinstance(val.val, str)]
+        symbols_numerical = self._parameters[:]
         symbols_numerical += ['t']
         symbols_numerical = set([Symbol(s) for s in symbols_numerical])
         return symbols_numerical
     
     def _get_expression_symbols(self):
-        symbols_expressions = [smp.parsing.sympy_parser.parse_expr(val.val) for val in self.__dict__.values()
-                               if (isinstance(val, OdeParameter) and isinstance(val.val, str))]
+        symbols_expressions = [smp.parsing.sympy_parser.parse_expr(getattr(self, s))
+                                for s in self._compound_vars]
         symbols_expressions = set().union(*[s.free_symbols for s in symbols_expressions])
         return symbols_expressions
     
@@ -146,7 +140,7 @@ class odeParameters:
         while len(unordered) != 0:
             for compound in unordered:
                 if compound not in ordered:
-                    symbols = smp.parsing.sympy_parser.parse_expr(getattr(self, compound).val).free_symbols
+                    symbols = smp.parsing.sympy_parser.parse_expr(getattr(self, compound)).free_symbols
                     m = [True if (s in symbols_num) or (str(s) in ordered) else False for s in symbols]
                     if all(m):
                         ordered.append(compound)
@@ -164,7 +158,7 @@ class odeParameters:
     
     @property
     def p(self):
-        return [getattr(self, p).val for p in self._parameters]
+        return [getattr(self, p) for p in self._parameters]
         
         
     def get_index_parameter(self, parameter, mode = 'python'):
@@ -193,7 +187,7 @@ class odeParameters:
     def __repr__(self):
         rep = f"OdeParameters("
         for par in self._parameters:
-            rep += f"{par}={getattr(self, par).val}, "
+            rep += f"{par}={getattr(self, par)}, "
         return rep.strip(", ") + ")"
 
 def setup_parameter_scan_1D(odePar, parameter, values):
@@ -202,7 +196,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     else:
         indices = [odePar.get_index_parameter(parameter)]
 
-    pars = str(odePar.generate_p()).strip('[]').split(',')
+    pars = str(odePar.p).strip('[]').split(',')
     for idx in indices:
         pars[idx] = "params[i]"
     
@@ -217,7 +211,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     """)
 
 def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
-    pars = str(odePar.generate_p()).strip('[]').split(',')
+    pars = str(odePar.p).strip('[]').split(',')
 
     for idN, parameter in enumerate(parameters):
         if isinstance(parameter, (list, tuple)):
@@ -251,7 +245,7 @@ def generate_preamble(odepars: odeParameters, transitions: list) -> str:
     for idp, par in enumerate(odepars._parameters):
         preamble += f"\t\t{par} = p[{idp+1}]\n"
     for par in odepars._compound_vars:
-        preamble += f"\t\t{par} = {getattr(odepars, par).val}\n"
+        preamble += f"\t\t{par} = {getattr(odepars, par)}\n"
         
     for transition in transitions:
         preamble += f"\t\t{transition.Ω}ᶜ = conj({transition.Ω})\n"
