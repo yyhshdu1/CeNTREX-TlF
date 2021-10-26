@@ -3,8 +3,6 @@ import sympy as smp
 from julia import Main
 from pathlib import Path
 from sympy import Symbol
-from collections import OrderedDict
-
 
 __all__ = [
     'initialize_julia', 'generate_ode_fun_julia', 'setup_variables_julia',
@@ -77,7 +75,8 @@ class odeParameters:
             odeParameters(**kwargs)
         
 
-        kwargs = self._check_for_ρ(kwargs)
+        # kwargs = self._check_for_density(kwargs)
+        # kwargs = self._check_for_states(kwargs)
         self._parameters = [key for key,val in kwargs.items() if not isinstance(val, str)]
         self._compound_vars = [key for key,val in kwargs.items() if isinstance(val, str)]
         
@@ -92,16 +91,27 @@ class odeParameters:
         self._order_compound_vars()
     
     
-    def _check_for_ρ(self, kwargs):
-        assert 'ρ' in kwargs.keys(), "Supply an initial density ρ to OdeParameters"
+    def _check_for_density(self, kwargs):
+        assert 'ρ' in kwargs.keys(), "Supply an initial density ρ to odeParameters"
         self.ρ = kwargs.get('ρ')
         del kwargs['ρ']
+        return kwargs
+
+    def _check_for_states(self, kwargs):
+        assert 'ground' in kwargs.keys(), "Supply ground states `ground` to odeParameters"
+        self.ground = kwargs.get('ground')
+        del kwargs['ground']
+        assert 'excited' in kwargs.keys(), "Supply excited states `excited` to odeParameters"
+        self.excited = kwargs.get('excited')
+        del kwargs['excited']
         return kwargs
 
     def __setattr__(self, name, value):
         if name in ['_parameters', '_compound_vars']:
             super(odeParameters, self).__setattr__(name, value)
         elif name == 'ρ':
+            super(odeParameters, self).__setattr__(name, value)
+        elif name in ["ground", "excited"]:
             super(odeParameters, self).__setattr__(name, value)
         elif name in self._parameters:
             assert not isinstance(value, str), "Cannot change parameter from numeric to str"
@@ -179,7 +189,8 @@ class odeParameters:
             return [self._get_index_parameter(par, mode) for par in parameter]
         
     def check_transition_symbols(self, transitions):
-        to_check = ('Ω', 'δ')
+        # check Rabi rate and detuning symbols
+        to_check = ['Ω', 'δ']
         symbols_defined = [str(s) for s in self._get_defined_symbols()]
         not_defined = []
         for transition in transitions:
@@ -191,7 +202,24 @@ class odeParameters:
         if len(not_defined) > 0:
             not_defined = set([str(s) for s in not_defined])
             raise AssertionError(f"Symbol(s) from transitions not defined: {', '.join(not_defined)}")
-    
+
+        # check polarization switching symbols
+        to_check = []
+        for transition in transitions:
+            to_check.extend(transition.polarization_symbols)
+
+        symbols_defined = self._get_defined_symbols()
+        
+        warn_flag = False
+        warn_string = f"Symbol(s) in transition polarization switching not defined: "
+        for ch in to_check:
+            if (ch not in symbols_defined):
+                warn_flag = True
+                warn_string += f"{ch}, "
+        if warn_flag:
+            raise AssertionError(warn_string.strip(' ,'))
+        
+
     def generate_p_julia(self):
         Main.eval(f"p = {self.p}")
     
