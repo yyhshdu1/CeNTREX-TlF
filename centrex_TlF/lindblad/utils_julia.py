@@ -138,13 +138,9 @@ class odeParameters:
         ordered = []
 
         while len(unordered) != 0:
-            print(unordered)
             for compound in unordered:
                 if compound not in ordered:
                     symbols = smp.parsing.sympy_parser.parse_expr(getattr(self, compound)).free_symbols
-                    print(symbols_num)
-                    print(ordered, symbols)
-                    print('='*80)
                     m = [True if (s in symbols_num) or (str(s) in ordered) else False for s in symbols]
                     if all(m):
                         ordered.append(compound)
