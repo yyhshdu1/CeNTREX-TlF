@@ -3,6 +3,9 @@ from centrex_TlF.lindblad.utils import generate_density_matrix_symbolic
 from centrex_TlF.lindblad.utils_multiprocessing import (
     multi_system_of_equations_to_lines
 )
+from centrex_TlF.lindblad.utils_julia import (
+    odeParameters
+)
 
 __all__ = [
     'system_of_equations_to_lines',
