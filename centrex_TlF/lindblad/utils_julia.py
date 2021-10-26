@@ -75,6 +75,8 @@ class odeParameters:
             kwargs = {par: 0 for par in args[0]}
             odeParameters(**kwargs)
         
+
+        kwargs = self._check_for_ρ(kwargs)
         self._parameters = [key for key,val in kwargs.items() if not isinstance(val, str)]
         self._compound_vars = [key for key,val in kwargs.items() if isinstance(val, str)]
         
@@ -89,8 +91,16 @@ class odeParameters:
         self._order_compound_vars()
     
     
+    def _check_for_ρ(self, kwargs):
+        assert 'ρ' in kwargs.keys(), "Supply an initial density ρ to OdeParameters"
+        self.ρ = kwargs.get('ρ')
+        del kwargs['ρ']
+        return kwargs
+
     def __setattr__(self, name, value):
         if name in ['_parameters', '_compound_vars']:
+            super(odeParameters, self).__setattr__(name, value)
+        elif name == 'ρ':
             super(odeParameters, self).__setattr__(name, value)
         elif name in self._parameters:
             assert not isinstance(value, str), "Cannot change parameter from numeric to str"
