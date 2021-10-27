@@ -1,13 +1,17 @@
 import numpy as np
+from itertools import product
 from functools import lru_cache
+from dataclasses import dataclass
 from sympy.physics.quantum.cg import CG
-from centrex_TlF.states.states import State
+from typing import Union, SupportsFloat
+from centrex_TlF.states.states import State, CoupledBasisState
 from centrex_TlF.hamiltonian.utils import reorder_evecs
 
 __all__ = [
     'find_state_idx_from_state', 'find_exact_states', 
     'check_approx_state_exact_state', 'parity_X', 'BasisStates_from_State',
-    'CGc', 'find_states_idxs_from_states'
+    'CGc', 'find_states_idxs_from_states', 'get_indices_quantumnumbers',
+    'QuantumSelector', 'get_unique_basisstates'
 ]
 
 @lru_cache(maxsize = int(1e6))
@@ -102,6 +106,15 @@ def find_exact_states(states_approx, H, QN, V_ref = None):
     return states
 
 def check_approx_state_exact_state(approx, exact):
+    """Check if the exact found states match the approximate states. The exact
+    states are found from the eigenvectors of the hamiltonian and are often a 
+    superposition of various states.
+    The approximate states are used in initial setup of the hamiltonian.
+
+    Args:
+        approx (State): approximate state
+        exact (State): exact state
+    """
     approx = approx.find_largest_component()
     exact = exact.find_largest_component()
 
@@ -125,3 +138,138 @@ def BasisStates_from_State(states):
             if basisstate not in unique:
                 unique.append(basisstate)
     return np.array(unique)
+
+
+NumberType = type(SupportsFloat)
+@dataclass
+class QuantumSelector:
+    """Class for setting quantum numbers for selecting a subset of states
+    from a larger set of states
+
+    Args:
+        J (Union[NumberType, list, np.ndarray]): rotational quantum number
+        F1 (Union[NumberType, list, np.ndarray]): 
+        F (Union[NumberType, list, np.ndarray]): 
+        mF (Union[NumberType, list, np.ndarray]):
+        electronic (Union[str, list, np.ndarray]): electronic state
+    """
+    J: Union[NumberType, list, np.ndarray] = None
+    F1: Union[NumberType, list, np.ndarray] = None
+    F: Union[NumberType, list, np.ndarray] = None
+    mF: Union[NumberType, list, np.ndarray] = None
+    electronic: Union[str, list, np.ndarray] = None
+    P: Union[NumberType, list, np.ndarray] = None
+    Ω: Union[NumberType, list, np.ndarray] = None
+
+    def get_indices(self, QN):
+        return get_indices_quantumnumbers_base(self, QN)
+
+def get_indices_quantumnumbers_base(qn_selector: QuantumSelector, QN: Union[list, np.ndarray]) -> np.ndarray:
+    """return the indices corresponding to all states in QN that correspond to 
+    the quantum numbers in QuantumSelector. 
+    Entries in QuantumSelector quantum numbers can be either single numbers or 
+    lists/arrays. States with all possible combinations of quantum numbers in 
+    QuantumSelector are found
+
+    Args:
+        qn_selector (QuantumSelector): QuantumSelector class containing the 
+                                        quantum numbers to find corresponding 
+                                        indices for
+        QN (Union[list, np.ndarray]): list or array of states
+
+    Raises:
+        AssertionError: only supports State and CoupledBasisState types the States list or array
+
+    Returns:
+        np.ndarray: indices corresponding to the quantum numbers
+    """
+    assert isinstance(qn_selector, QuantumSelector), "supply a QuantumSelector object to select states"
+    if isinstance(QN[0], State):
+        Js = np.array([s.find_largest_component().J for s in QN])
+        F1s = np.array([s.find_largest_component().F1 for s in QN])
+        Fs = np.array([s.find_largest_component().F for s in QN])
+        mFs = np.array([s.find_largest_component().mF for s in QN])
+        estates = np.array([s.find_largest_component().electronic_state for s in QN])
+    elif isinstance(QN[0], CoupledBasisState):
+        Js = np.array([s.J for s in QN])
+        F1s = np.array([s.F1 for s in QN])
+        Fs = np.array([s.F for s in QN])
+        mFs = np.array([s.mF for s in QN])
+        estates = np.array([s.electronic_state for s in QN])
+    else:
+        raise AssertionError("get_indices_quantumnumbers_base() only supports State and CoupledBasisState types the States list or array")
+
+    J = qn_selector.J
+    F1 = qn_selector.F1
+    F = qn_selector.F
+    mF = qn_selector.mF
+    estate = qn_selector.electronic
+    assert estate is not None, "supply the electronic state to select states"
+
+    # generate all combinations
+    fields = []
+    for par in ['J', 'F1', 'F', 'mF', 'electronic']:
+        par = getattr(qn_selector, par)
+        fields.append([par] if not isinstance(par, (list, tuple, np.ndarray)) else par)
+    combinations = product(*fields)
+
+
+    mask = np.zeros(len(QN), dtype = bool)
+    mask_all = np.ones(len(QN), dtype = bool)
+    for J, F1, F, mF, estate in combinations:
+        # generate the masks for states in QN where the conditions are met
+        mask_J = Js == J if J is not None else mask_all
+        mask_F1 = F1s == F1 if F1 is not None else mask_all
+        mask_F = Fs == F if F is not None else mask_all
+        mask_mF = mFs == mF if mF is not None else mask_all
+        mask_es = estates == estate if estate is not None else np.zeros(len(QN), dtype == bool)
+        # get the indices of the states in QN to compact
+        mask = mask | (mask_J & mask_F1 & mask_F & mask_mF & mask_es)
+    
+    return np.where(mask)[0]
+
+def get_indices_quantumnumbers(qn_selector: Union[QuantumSelector, list, np.ndarray], 
+                                    QN: Union[list, np.ndarray]) -> np.ndarray:
+    """return the indices corresponding to all states in QN that correspond to 
+    the quantum numbers in QuantumSelector or a list of QuantumSelector objects. 
+    Entries in QuantumSelector quantum numbers can be either single numbers or 
+    lists/arrays. States with all possible combinations of quantum numbers in 
+    QuantumSelector are found
+
+    Args:
+        qn_selector (Union[QuantumSelector, list, np.ndarray]): 
+                    QuantumSelector class or list/array of QuantumSelectors 
+                    containing the quantum numbers to find corresponding indices
+        
+        QN (Union[list, np.ndarray]): list or array of states
+
+    Raises:
+        AssertionError: only supports State and CoupledBasisState types the States list or array
+
+    Returns:
+        np.ndarray: indices corresponding to the quantum numbers
+    """
+    if isinstance(qn_selector, QuantumSelector):
+        return get_indices_quantumnumbers_base(qn_selector, QN)
+    elif isinstance(qn_selector, (list, np.ndarray)):
+        return np.unique(np.concatenate([get_indices_quantumnumbers_base(qns, QN) for qns in qn_selector]))
+    else:
+        raise AssertionError("qn_selector required to be of type QuantumSelector, list or np.ndarray")
+
+def get_unique_basisstates(states: Union[list, np.ndarray])->Union[list, np.ndarray]:
+    """get a list/array of unique BasisStates in the states list/array
+
+    Args:
+        states (Union[list, np.ndarray]): list/array of BasisStates
+
+    Returns:
+        Union[list, np.ndarray]: list/array of unique BasisStates
+    """
+    states_unique = []
+    for state in states:
+        if state not in states_unique:
+            states_unique.append(state)
+
+    if isinstance(states, np.ndarray): states_unique = np.asarray(states_unique)
+
+    return states_unique

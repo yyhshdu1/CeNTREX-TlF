@@ -11,13 +11,16 @@ __all__ = [
 
 class CoupledBasisState:
     # constructor
-    def __init__(self, F, mF, F1, J, I1, I2, Omega = None, P = None, electronic_state = None, energy = None):
+    def __init__(self, F, mF, F1, J, I1, I2, Omega = None, P = None, electronic_state = None, energy = None, Ω = None):
         self.F, self.mF  = F, mF
         self.F1 = F1
         self.J = J
         self.I1 = I1
         self.I2 = I2
         self.Omega = Omega
+        # add Ω for convenience
+        self.Ω = Ω
+        if Ω is not None: self.Omega = Ω
         self.P = P
         self.electronic_state = electronic_state
         self.energy = energy
@@ -464,7 +467,7 @@ class State:
     
     #Function that displays the state as a sum of the basis states
     def print_state(self, tol = 0.1, probabilities = False):
-         for amp, basis_state in self.data:
+        for amp, basis_state in self.data:
             if np.abs(amp) > tol:
                 if probabilities:
                     amp = np.abs(amp)**2
@@ -472,7 +475,7 @@ class State:
                 string = basis_state.print_quantum_numbers(printing = False)
                 string = '{:.4f}'.format(complex(amp))+' x '+ string
                 print(string)
-                 
+
     #Function that returns state vector in given basis  
     def state_vector(self,QN):
         state_vector = [1*state @ self for state in QN]
@@ -532,10 +535,10 @@ class State:
         return string
     
     def find_largest_component(self):
-         #Order the state by amplitude
-         state = self.order_by_amp()
+        #Order the state by amplitude
+        state = self.order_by_amp()
         
-         return state.data[0][1]
+        return state.data[0][1]
     
     #Method for converting the state into the coupled basis
     def transform_to_coupled(self):

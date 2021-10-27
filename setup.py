@@ -18,7 +18,8 @@ setuptools.setup(
                      'centrex_TlF/pre_calculated/coupled_hamiltonian_B.db',
                      'centrex_TlF/pre_calculated/matrix_elements.db',
                      'centrex_TlF/pre_calculated/precalculated.json',
-                     'centrex_TlF/pre_calculated/transitions.pickle'])],
+                     'centrex_TlF/pre_calculated/transitions.pickle']),
+                    ('centrex_TlF/lindblad', ['centrex_TlF/lindblad/julia_common.jl'])],
     python_requires = '>=3.6',
     version = "0.1"
 )
