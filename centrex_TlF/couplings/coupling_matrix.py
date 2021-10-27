@@ -51,9 +51,6 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
     pre_cached = check_states_in_ED_ME_coupled(Jg, Je, pol_vec)
 
     if pre_cached:
-        if nprocs > 1:
-            logging.warning("generate_coupling_matrix: Pre-cached calculations, multiprocessing not used")
-
         # connect to sqlite3 database on file, not used when multiprocessing
         path = Path(__file__).parent.parent / "pre_calculated"
         db = path / "matrix_elements.db"
