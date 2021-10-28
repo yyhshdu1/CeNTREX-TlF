@@ -22,6 +22,7 @@ def initialize_julia(nprocs):
         global_logger(TerminalLogger())
 
         using Distributed
+        using ProgressMeter
     """)
 
     if Main.eval("nprocs()") < nprocs:
@@ -453,14 +454,14 @@ def solve_problem_parameter_scan(
         method = "Tsit5()", 
         distributed_method = "EnsembleDistributed()",
         abstol = 1e-7, reltol = 1e-4, save_everystep = True,
-        callback = None, problem_name = "ens_prob",
+        callback = None, ensemble_problem_name = "ens_prob",
         trajectories = None
     ):
     if trajectories is None:
         trajectories = "size(params)[1]"
     if callback is not None:
         Main.eval(f"""
-            sol = solve({problem_name}, {method}, {distributed_method}, 
+            sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
                         abstol = {abstol}, reltol = {reltol}, 
                         trajectories = {trajectories}, callback = {callback},
                         save_everystep = {str(save_everystep).lower()}
@@ -468,7 +469,7 @@ def solve_problem_parameter_scan(
         """)
     else:
         Main.eval(f"""
-            sol = solve({problem_name}, {method}, {distributed_method}, 
+            sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
                         abstol = {abstol}, reltol = {reltol}, 
                         trajectories = {trajectories},
                         save_everystep = {str(save_everystep).lower()}
