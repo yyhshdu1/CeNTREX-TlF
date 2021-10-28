@@ -276,7 +276,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     else:
         indices = [odePar.get_index_parameter(parameter)]
 
-    pars = str(odePar.p).strip('[]').split(',')
+    pars = str(odePar.p)[1:-1].split(',')
     for idx in indices:
         pars[idx] = "params[i]"
     
@@ -386,8 +386,34 @@ def setup_state_integral_calculation(states, output_func = None,
             end""")
     return output_func
 
+def setup_state_integral_map(states, Δx, xmax, vx_index, integral_steps = 10,
+                            output_func = None):
+    if output_func is None:
+        output_func = "output_func"
+    Main.eval(f"""
+    @everywhere function {output_func}(sol, i)
+        results = zeros({int(xmax/Δx)},2)
+        vx = sol.prob.p[{vx_index}]
+        Δt = {Δx}/vx
+        tarray = collect(range(0,stop=Δt, length = {integral_steps}))
+        @inbounds begin
+            for i=1:{int(xmax/Δx)}
+                t = Δt*(i-1) + Δt/2
+                results[i,1] = t*vx
+                results[i,2] = Γ*trapz(tarray .+ (t-Δt/2), 
+                                    [sum(diag(real(sol(ti + (t-Δt/2))))[{states}]) for ti in tarray]
+                                )
+            end
+        end
+        return results, false
+    end
+    """)
+        
+    return output_func
+
 def setup_discrete_callback_terminate(odepars: odeParameters, 
-                                        stop_expression: str):
+                                        stop_expression: str,
+                                        callback_name = None):
     # parse expression string to sympy equation
     expression = smp.parsing.sympy_parser.parse_expr(stop_expression)
     # extract symbols in expression and convert to a list of strings 
@@ -402,11 +428,14 @@ def setup_discrete_callback_terminate(odepars: odeParameters,
     indices = [odepars.get_index_parameter(sym, mode = "julia") for sym in symbols_in_expression]
     for idx, sym in zip(indices, symbols_in_expression):
         stop_expression = stop_expression.replace(str(sym), f"integrator.p[{idx}]")
+    if callback_name is None:
+        callback_name = "cb"
     Main.eval(f"""
         @everywhere condition(u,t,integrator) = {stop_expression}
         @everywhere affect!(integrator) = terminate!(integrator)
-        cb = DiscreteCallback(condition, affect!)
+        {callback_name} = DiscreteCallback(condition, affect!)
     """)
+    return callback_name
 
 def setup_problem(odepars: odeParameters, tspan: list, ρ: np.ndarray, 
                     problem_name = "prob"):
@@ -486,9 +515,12 @@ def solve_problem_parameter_scan(
 def get_results_parameter_scan(scan_values = None):
     results = np.array(Main.eval("sol.u"))
     if scan_values is not None:
-        results = results.reshape([len(val) for val in scan_values])
-        X,Y = np.meshgrid(*scan_values)
-        return X,Y,results.T
+        if isinstance(scan_values, list) or (scan_values.ndim > 1):
+            results = results.reshape([len(val) for val in scan_values])
+            X,Y = np.meshgrid(*scan_values)
+            return X,Y,results.T
+        else:
+            return scan_values, results
     return results
 
 def get_results():
