@@ -9,7 +9,10 @@ __all__ = [
     'odeParameters', 'setup_parameter_scan_1D', 'setup_ratio_calculation',
     'setup_initial_condition_scan', 'setup_state_integral_calculation',
     'get_indices_diag_flattened', 'setup_parameter_scan_ND', 
-    "handle_randomized_ensemble_solution"
+    "handle_randomized_ensemble_solution", "setup_discrete_callback_terminate",
+    "setup_problem", "solve_problem", "get_results", "do_simulation_single", 
+    "setup_problem_parameter_scan", "solve_problem_parameter_scan", 
+    "get_results_parameter_scan"
 ]
 
 def initialize_julia(nprocs):
@@ -87,7 +90,7 @@ class odeParameters:
                 val = val.replace("\u03d5", "\u03c6")
             setattr(self, key, val)
         
-        self.check_symbols_defined()
+        self._check_symbols_defined()
         self._order_compound_vars()
     
     
@@ -140,7 +143,7 @@ class odeParameters:
         symbols_expressions = set().union(*[s.free_symbols for s in symbols_expressions])
         return symbols_expressions
     
-    def check_symbols_defined(self):
+    def _check_symbols_defined(self):
         symbols_defined = self._get_defined_symbols()
         symbols_expressions = self._get_expression_symbols()
         
@@ -148,6 +151,26 @@ class odeParameters:
         warn_string = f"Symbol(s) not defined: "
         for se in symbols_expressions:
             if se not in symbols_defined:
+                warn_flag = True
+                warn_string += f"{se}, "
+        if warn_flag:
+            raise AssertionError(warn_string.strip(' ,'))
+    
+    def check_symbols_in_parameters(self, symbols_other):
+        if not isinstance(symbols_other, (list, np.ndarray, tuple, set)):
+            symbols_other = [symbols_other]
+        elif isinstance(symbols_other, set):
+            symbols_other = list(symbols_other)
+        if isinstance(symbols_other[0], smp.Symbol):
+            symbols_other = [str(sym) for sym in symbols_other]
+
+        parameters = self._parameters[:]
+        parameters += ['t']
+        
+        warn_flag = False
+        warn_string = f"Symbol(s) not defined: "
+        for se in symbols_other:
+            if se not in parameters:
                 warn_flag = True
                 warn_string += f"{se}, "
         if warn_flag:
@@ -218,6 +241,7 @@ class odeParameters:
                 warn_string += f"{ch}, "
         if warn_flag:
             raise AssertionError(warn_string.strip(' ,'))
+        return True
         
 
     def generate_p_julia(self):
@@ -274,8 +298,6 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
     """)
     if randomize:
         return ind_random
-
-
 
 def setup_ratio_calculation(states):
     cmd = ""
@@ -339,6 +361,148 @@ def setup_state_integral_calculation(states, nphotons = False, Γ = None):
             @everywhere function output_func(sol,i)
                 return trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
             end""")
+
+def setup_discrete_callback_terminate(odepars: odeParameters, 
+                                        stop_expression: str):
+    # parse expression string to sympy equation
+    expression = smp.parsing.sympy_parser.parse_expr(stop_expression)
+    # extract symbols in expression and convert to a list of strings 
+    symbols_in_expression = list(expression.free_symbols)
+    symbols_in_expression = [str(sym) for sym in symbols_in_expression] 
+    # check if all symbols are parameters of the ODE
+    odepars.check_symbols_in_parameters(symbols_in_expression)
+
+    # remove t
+    symbols_in_expression.remove('t')
+    # get indices of symbols
+    indices = [odepars.get_index_parameter(sym, mode = "julia") for sym in symbols_in_expression]
+    for idx, sym in zip(indices, symbols_in_expression):
+        stop_expression = stop_expression.replace(str(sym), f"integrator.p[{idx}]")
+    Main.eval(f"""
+        @everywhere condition(u,t,integrator) = {stop_expression}
+        @everywhere affect!(integrator) = terminate!(integrator)
+        cb = DiscreteCallback(condition, affect!)
+    """)
+
+def setup_problem(odepars: odeParameters, tspan: list, ρ: np.ndarray, 
+                    problem_name = "prob"):
+    odepars.generate_p_julia()
+    Main.ρ = ρ
+    Main.tspan = tspan
+    assert Main.eval("@isdefined Lindblad_rhs!"), "Lindblad function is not defined in Julia"
+    Main.eval(f"""
+        {problem_name} = ODEProblem(Lindblad_rhs!,ρ,tspan,p)
+    """)
+
+def setup_problem_parameter_scan(odepars: odeParameters, tspan: list, 
+                                ρ: np.ndarray, parameters: list, 
+                                values: np.ndarray, dimensions: int = 1,
+                                problem_name = "prob", 
+                                output_func = None):
+    setup_problem(odepars, tspan, ρ, problem_name)
+    if dimensions == 1:
+        setup_parameter_scan_1D(odepars, parameters, values)
+    else:
+        setup_parameter_scan_ND(odepars, parameters, values)
+    if output_func is not None:
+        Main.eval(f"""
+            ens_{problem_name} = EnsembleProblem({problem_name}, 
+                                                    prob_func = prob_func,
+                                                    output_func = {output_func}
+                                                )
+        """)
+    else:
+        Main.eval(f"""
+            ens_{problem_name} = EnsembleProblem({problem_name}, 
+                                                    prob_func = prob_func)
+        """)
+
+def solve_problem(method = "Tsit5()", abstol = 1e-7, reltol = 1e-4, 
+                callback = None, problem_name = "prob", progress = False):
+    if callback is not None:
+        Main.eval(f"""
+            sol = solve({problem_name}, {method}, abstol = {abstol}, 
+                        reltol = {reltol}, progress = {str(progress).lower()}, 
+                        callback = {callback}    
+                    )
+        """)
+    else:
+        Main.eval(f"""
+            sol = solve({problem_name}, {method}, abstol = {abstol}, reltol = {reltol},
+                        progress = {str(progress).lower()}    
+                    )
+        """)
+
+def solve_problem_parameter_scan(
+        method = "Tsit5()", 
+        distributed_method = "EnsembleDistributed()",
+        abstol = 1e-7, reltol = 1e-4, save_everystep = True,
+        callback = cb, problem_name = "ens_prob",
+        trajectories = None
+    ):
+    if trajectories is None:
+        trajectories = "size(params)[1]"
+    if callback is not None:
+        Main.eval(f"""
+            sol = solve({problem_name}, {method}, {distributed_method}, 
+                        abstol = {abstol}, reltol = {reltol}, 
+                        trajectories = {trajectories}, callback = {callback},
+                        save_everystep = {str(save_everystep).lower()}
+                    )
+        """)
+    else:
+        Main.eval(f"""
+            sol = solve({problem_name}, {method}, {distributed_method}, 
+                        abstol = {abstol}, reltol = {reltol}, 
+                        trajectories = {trajectories},
+                        save_everystep = {str(save_everystep).lower()}
+                    )
+        """)  
+
+def get_results_parameter_scan(scan_values = None):
+    results = np.array(Main.eval("sol.u"))
+    if scan_values is not None:
+        results = results.reshape([len(val) for val in scan_values])
+        X,Y = np.meshgrid(*scan_values)
+        return X,Y,results.T
+    return results
+
+def get_results():
+    """Retrieve the results of a single trajectory OBE simulation solution.
+
+    Returns:
+        tuple: tuple containing the timestamps and an n x m numpy arra, where
+                n is the number of states, and m the number of timesteps
+    """
+    results = np.real(np.einsum('jji->ji', np.array(Main.eval("sol[:]")).T))
+    t = Main.eval("sol.t")
+    return t, results
+
+def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
+    """Perform a single trajectory solve of the OBE equations for a specified 
+    TlF system.
+
+    Args:
+        odepars (odeParameters): object containing the ODE parameters used in
+        the solver
+        tspan (list, tuple): time range to solve for
+        terminate_expression (str, optional): Expression that determines when to 
+                                            stop integration. Defaults to None.
+
+    Returns:
+        tuple: tuple containing the timestamps and an n x m numpy arra, where
+                n is the number of states, and m the number of timesteps
+    """
+    callback_flag = False
+    if terminate_expression is not None:
+        setup_discrete_callback_terminate(odepars, terminate_expression)
+        callback_flag = True
+    setup_problem(odepars, tspan, ρ)
+    if callback_flag:
+        solve_problem(callback = "cb")
+    else:
+        solve_problem()
+    return get_results()
 
 def get_indices_diag_flattened(n):
     return np.diag(np.arange(0,n*n).reshape(-1,n))
