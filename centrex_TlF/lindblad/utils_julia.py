@@ -316,7 +316,9 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
     if randomize:
         return ind_random
 
-def setup_ratio_calculation(states):
+def setup_ratio_calculation(states, output_func = None):
+    if output_func is None:
+        output_func = "output_func"
     cmd = ""
     if isinstance(states[0], (list, np.ndarray, tuple)):
         for state in states:
@@ -327,7 +329,7 @@ def setup_ratio_calculation(states):
         cmd = f"sum(real(diag(sol.u[end])[{states}]))/sum(real(diag(sol.u[1])[{states}]))"
 
     Main.eval(f"""
-    @everywhere function output_func(sol,i)
+    @everywhere function {output_func}(sol,i)
         if size(sol.u)[1] == 1
             return NaN, false
         else
@@ -335,6 +337,7 @@ def setup_ratio_calculation(states):
             return val, false
         end
     end""")
+    return output_func
 
 def handle_randomized_ensemble_solution(ind_random, sol_name = 'sim'):
     order_restored = np.argsort(ind_random)
@@ -350,7 +353,8 @@ def setup_initial_condition_scan(values):
     end
     """)
 
-def setup_state_integral_calculation(states, nphotons = False, Γ = None):
+def setup_state_integral_calculation(states, output_func = None, 
+                                        nphotons = False, Γ = None):
     """Setup an integration output_function for an EnsembleProblem. 
     Uses trapezoidal integration to integrate the states.
     
@@ -361,23 +365,26 @@ def setup_state_integral_calculation(states, nphotons = False, Γ = None):
         Γ (float, optional): decay rate in 2π Hz (rad/s), not necessary if already
                                 loaded into Julia globals
     """
+    if output_func is None:
+        output_func = "output_func"
     if nphotons & Main.eval("@isdefined Γ"):
         Main.eval(f"""
-        @everywhere function output_func(sol,i)
+        @everywhere function {output_func}(sol,i)
             return Γ.*trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
         end""")
     else:
         if nphotons:
             assert Γ is not None, "Γ not defined as a global in Julia and not supplied to function"
             Main.eval(f"""
-            @everywhere function output_func(sol,i)
+            @everywhere function {output_func}(sol,i)
                 return {Γ}.*trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
             end""")
         else:
             Main.eval(f"""
-            @everywhere function output_func(sol,i)
+            @everywhere function {output_func}(sol,i)
                 return trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
             end""")
+    return output_func
 
 def setup_discrete_callback_terminate(odepars: odeParameters, 
                                         stop_expression: str):
