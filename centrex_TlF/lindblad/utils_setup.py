@@ -65,7 +65,7 @@ def generate_OBE_system(system_parameters, transitions,
         logging.basicConfig(level=logging.INFO)
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
-        logger.info("generate_OBE_system: 1 -> Generating the reduced Hamiltonian")
+        logger.info("generate_OBE_system: 1/6 -> Generating the reduced Hamiltonian")
     ground_states, excited_states, QN, H_int, V_ref_int = \
         generate_total_reduced_hamiltonian(
             ground_states_approx  = \
@@ -74,7 +74,7 @@ def generate_OBE_system(system_parameters, transitions,
                     generate_coupled_states_excited_B(system_parameters.excited)
         )
     if verbose:
-        logger.info("generate_OBE_system: 2 -> Generating the couplings corresponding to the transitions")
+        logger.info("generate_OBE_system: 2/6 -> Generating the couplings corresponding to the transitions")
     couplings = [
         generate_coupling_field_automatic(
             transition.ground,
@@ -86,23 +86,23 @@ def generate_OBE_system(system_parameters, transitions,
     ]
 
     if verbose:
-        logger.info("generate_OBE_system: 3 -> Generating the symbolic Hamiltonian")
+        logger.info("generate_OBE_system: 3/6 -> Generating the symbolic Hamiltonian")
     H_symbolic = generate_total_symbolic_hamiltonian(
                                             QN, H_int, couplings, transitions
                                             )
 
     if verbose:
-        logger.info("generate_OBE_system: 4 -> Generating the collapse matrices")
+        logger.info("generate_OBE_system: 4/6 -> Generating the collapse matrices")
     C_array = collapse_matrices(
                 QN, ground_states, excited_states, gamma = system_parameters.Γ
             )
     if verbose:
-        logger.info("generate_OBE_system: 5 -> Transforming the Hamiltonian and collapse matrices into a symbolic system of equations")
+        logger.info("generate_OBE_system: 5/6 -> Transforming the Hamiltonian and collapse matrices into a symbolic system of equations")
     system = generate_system_of_equations_symbolic(
                 H_symbolic, C_array, progress = False, fast = True
             )
     if verbose:
-        logger.info("generate_OBE_system: 6 -> Generating Julia code representing the system of equations")
+        logger.info("generate_OBE_system: 6/6 -> Generating Julia code representing the system of equations")
         logging.basicConfig(level=logging.WARNING)
     code_lines = system_of_equations_to_lines(system, nprocs = system_parameters.nprocs)
     obe_system = OBESystem(
@@ -151,15 +151,15 @@ def setup_OBE_system_julia(system_parameters, ode_parameters, transitions,
         logging.basicConfig(level=logging.INFO)
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
-        logger.info("setup_OBE_system_julia: 1 -> Generating the preamble")
+        logger.info("setup_OBE_system_julia: 1/3 -> Generating the preamble")
     obe_system.preamble = generate_preamble(ode_parameters, transitions)
 
     if verbose:
-        logger.info(f"setup_OBE_system_julia: 2 -> Initializing Julia on {system_parameters.nprocs} cores")
+        logger.info(f"setup_OBE_system_julia: 2/3 -> Initializing Julia on {system_parameters.nprocs} cores")
     initialize_julia(nprocs = system_parameters.nprocs)
 
     if verbose:
-        logger.info("setup_OBE_system_julia: 3 -> Defining the ODE equation and parameters in Julia")
+        logger.info("setup_OBE_system_julia: 3/3 -> Defining the ODE equation and parameters in Julia")
         logging.basicConfig(level=logging.WARNING)
     generate_ode_fun_julia(obe_system.preamble, obe_system.code_lines)
     Main.eval(f"Γ = {system_parameters.Γ}")
