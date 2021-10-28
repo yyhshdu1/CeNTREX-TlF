@@ -80,7 +80,7 @@ class odeParameters:
         elif len(args) == 1:
             assert isinstance(args[0][0], str), "For legacy support supply a list of strings, one for each parameter"
             if 'ρ' not in args[0]: args[0].append('ρ')
-            kwargs = {par: 0 for par in args[0]}
+            kwargs = {par: 0.0 for par in args[0]}
             odeParameters(**kwargs)
         
 
