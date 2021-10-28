@@ -66,6 +66,12 @@ def setup_variables_julia(Γ, ρ, vars = None):
         for key, val in vars.items():
             Main.eval(f"@everywhere {key} = {val}")
 
+type_conv = {
+            'int': 'Int64', 'float': 'Float64', 'complex': 'ComplexF64', 
+            'float64': 'Float64', 'int32': 'Int32', 'complex128': 'ComplexF64',
+            'list': 'Array', 'ndarray': 'Array'
+            }
+
 class odeParameters:
     def __init__(self, *args, **kwargs):
         # if elif statement is for legacy support, where a list of parameters was supplied
@@ -92,7 +98,17 @@ class odeParameters:
         
         self._check_symbols_defined()
         self._order_compound_vars()
-    
+
+        # checking types, necessary if the ODE parameters contain arrays or list
+        # Julia can't do type inference then and this tanks performance
+        # storing the input types here for use in generate_preamble, but this is
+        # only used if one of the input parameters is an array
+        self._parameter_types = [type_conv.get(type(getattr(self, par)).__name__) 
+                                    for par in self._parameters ]
+        self._array_types = dict((par, type_conv.get(type(getattr(self, par)[0]).__name__))
+                                    for par in self._parameters 
+                                    if type_conv.get(type(getattr(self, par)).__name__) == 'Array'
+                                )
     
     def _check_for_density(self, kwargs):
         assert 'ρ' in kwargs.keys(), "Supply an initial density ρ to odeParameters"
@@ -110,7 +126,7 @@ class odeParameters:
         return kwargs
 
     def __setattr__(self, name, value):
-        if name in ['_parameters', '_compound_vars']:
+        if name in ['_parameters', '_compound_vars', '_parameter_types', '_array_types']:
             super(odeParameters, self).__setattr__(name, value)
         elif name == 'ρ':
             super(odeParameters, self).__setattr__(name, value)
@@ -437,7 +453,7 @@ def solve_problem_parameter_scan(
         method = "Tsit5()", 
         distributed_method = "EnsembleDistributed()",
         abstol = 1e-7, reltol = 1e-4, save_everystep = True,
-        callback = cb, problem_name = "ens_prob",
+        callback = None, problem_name = "ens_prob",
         trajectories = None
     ):
     if trajectories is None:
