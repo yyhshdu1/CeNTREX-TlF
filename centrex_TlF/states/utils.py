@@ -161,8 +161,8 @@ class QuantumSelector:
     P: Union[NumberType, list, np.ndarray] = None
     Ω: Union[NumberType, list, np.ndarray] = None
 
-    def get_indices(self, QN):
-        return get_indices_quantumnumbers_base(self, QN)
+    def get_indices(self, QN, mode = 'python'):
+        return get_indices_quantumnumbers_base(self, QN, mode)
 
 
 @dataclass
@@ -172,7 +172,9 @@ class SystemParameters:
     ground: Union[list, np.ndarray, QuantumSelector]
     excited: Union[list, np.ndarray, QuantumSelector]
 
-def get_indices_quantumnumbers_base(qn_selector: QuantumSelector, QN: Union[list, np.ndarray]) -> np.ndarray:
+def get_indices_quantumnumbers_base(qn_selector: QuantumSelector, 
+                                    QN: Union[list, np.ndarray],
+                                    mode: str = "python") -> np.ndarray:
     """return the indices corresponding to all states in QN that correspond to 
     the quantum numbers in QuantumSelector. 
     Entries in QuantumSelector quantum numbers can be either single numbers or 
@@ -234,7 +236,10 @@ def get_indices_quantumnumbers_base(qn_selector: QuantumSelector, QN: Union[list
         # get the indices of the states in QN to compact
         mask = mask | (mask_J & mask_F1 & mask_F & mask_mF & mask_es)
     
-    return np.where(mask)[0]
+    if mode == "python":
+        return np.where(mask)[0]
+    elif mode == "julia":
+        return np.where(mask)[0] + 1
 
 def get_indices_quantumnumbers(qn_selector: Union[QuantumSelector, list, np.ndarray], 
                                     QN: Union[list, np.ndarray]) -> np.ndarray:
