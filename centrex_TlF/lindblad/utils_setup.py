@@ -43,9 +43,10 @@ class OBESystem:
     code_lines: list
     full_output: bool = False
     preamble: str = ""
+    QN_original: np.ndarray = None
 
 def generate_OBE_system(system_parameters, transitions,
-                        verbose = False):
+                        qn_compact = None, verbose = False):
     """Convenience function for generating the symbolic OBE system of equations
     and Julia code.
 
@@ -87,14 +88,21 @@ def generate_OBE_system(system_parameters, transitions,
 
     if verbose:
         logger.info("generate_OBE_system: 3/6 -> Generating the symbolic Hamiltonian")
-    H_symbolic = generate_total_symbolic_hamiltonian(
-                                            QN, H_int, couplings, transitions
-                                            )
+    if qn_compact is not None:
+        H_symbolic, QN_compact = generate_total_symbolic_hamiltonian(
+                                                QN, H_int, couplings, transitions,
+                                                qn_compact = qn_compact
+                                                )
+    else:
+        H_symbolic = generate_total_symbolic_hamiltonian(
+                                                QN, H_int, couplings, transitions
+                                                )
 
     if verbose:
         logger.info("generate_OBE_system: 4/6 -> Generating the collapse matrices")
     C_array = collapse_matrices(
-                QN, ground_states, excited_states, gamma = system_parameters.Γ
+                QN, ground_states, excited_states, gamma = system_parameters.Γ,
+                qn_compact = qn_compact
             )
     if verbose:
         logger.info("generate_OBE_system: 5/6 -> Transforming the Hamiltonian and collapse matrices into a symbolic system of equations")
@@ -105,17 +113,24 @@ def generate_OBE_system(system_parameters, transitions,
         logger.info("generate_OBE_system: 6/6 -> Generating Julia code representing the system of equations")
         logging.basicConfig(level=logging.WARNING)
     code_lines = system_of_equations_to_lines(system, nprocs = system_parameters.nprocs)
+    if qn_compact is not None:
+        QN_original = QN
+        QN = QN_compact
+    else:
+        QN_original = None
     obe_system = OBESystem(
                     QN = QN, ground = ground_states, excited = excited_states,
                     couplings = couplings, H_symbolic = H_symbolic, 
                     H_int = H_int, V_ref_int = V_ref_int, C_array = C_array, 
                     system = system, 
-                    code_lines = code_lines
+                    code_lines = code_lines,
+                    QN_original = QN_original
                 )
     return obe_system
 
 def setup_OBE_system_julia(system_parameters, ode_parameters, transitions, 
-                            full_output = False, verbose = False):
+                            qn_compact = None, full_output = False, 
+                            verbose = False):
     """Convenience function for generating the OBE system and initializing it in 
     Julia
 
@@ -144,6 +159,7 @@ def setup_OBE_system_julia(system_parameters, ode_parameters, transitions,
                         H_symbolic, C_array, system, code_lines, preamble
     """
     obe_system = generate_OBE_system(system_parameters, transitions,
+                                        qn_compact = qn_compact, 
                                         verbose = verbose
                                     )
     obe_system.full_output = full_output
