@@ -55,6 +55,8 @@ def generate_OBE_system(system_parameters, transitions,
 
         transitions (list): list of TransitionSelectors defining the transitions
                             used in the OBE system.
+        qn_compact (QuantumSelector): dataclass specifying a subset of states to
+                                        select based on the quantum numbers
         verbose (bool, optional): Log progress to INFO. Defaults to False.
 
     Returns:
@@ -145,6 +147,8 @@ def setup_OBE_system_julia(system_parameters, ode_parameters, transitions,
                                             required to generate the coupling
                                             matrices and symbolic matrix for
                                             each transition
+        qn_compact (QuantumSelector): dataclass specifying a subset of states to
+                                        select based on the quantum numbers
         full_output (bool, optional): Returns all matrices, states etc. if True,
                                         Returns only QN if False. 
                                         Defaults to False.
