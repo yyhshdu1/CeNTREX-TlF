@@ -251,7 +251,10 @@ Note that the symbols defined in the `TransitionSelector` objects have to be def
 
 Finally `setup_OBE_system` generates the system, transcribes it into `julia` code and initializes all necessary `julia` packages and processes in the background.
 ```Python
-obe_system = centrex.lindblad.setup_OBE_system_julia(syspars, odepars, transitions, verbose=True, full_output=True, qn_compact=centrex.states.QuantumSelector(J=3, electronic = 'X'))
+obe_system = centrex.lindblad.setup_OBE_system_julia(
+                  syspars, odepars, transitions, verbose=True, full_output=True, 
+                  qn_compact=centrex.states.QuantumSelector(J=3, electronic = 'X')
+                )
 ```
 Note specifically `qn_compact`; for some simulations certain decays have to be included, but you might not care about which specific hyperfine sublevel the decays go to. `qn_compact` specifies which quantum numbers to combine into a single level (in this case `J=3`) in order to speed up the simulations. 
 
