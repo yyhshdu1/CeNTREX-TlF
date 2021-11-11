@@ -375,6 +375,7 @@ def setup_state_integral_calculation(states, output_func = None,
     else:
         if nphotons:
             assert Γ is not None, "Γ not defined as a global in Julia and not supplied to function"
+            Main.eval(f"@everywhere Γ = {Γ}")
             Main.eval(f"""
             @everywhere function {output_func}(sol,i)
                 return {Γ}.*trapz(sol.t, [real(sum(diag(sol.u[j])[{states}])) for j in 1:size(sol)[3]]), false
