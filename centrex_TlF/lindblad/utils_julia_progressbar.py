@@ -10,12 +10,14 @@ def solve_problem_parameter_scan_progress(
         abstol = 1e-7, reltol = 1e-4, save_everystep = True,
         callback = None, problem_name = 'prob',
         ensemble_problem_name = 'ens_prob', trajectories = None, 
-        output_func = None
+        output_func = None, saveat = None
     ):
     if trajectories is None:
         trajectories = "size(params)[1]"
     if callback is None:
         callback = "nothing"
+    if saveat is None:
+        saveat = "[]"
     if output_func is None:
         Main.eval("""
             @everywhere function output_func_progress(sol, i)
@@ -60,7 +62,8 @@ def solve_problem_parameter_scan_progress(
                             {distributed_method}, trajectories={trajectories},
                             abstol = {abstol}, reltol = {reltol}, 
                             callback = {callback}, 
-                            save_everystep = {str(save_everystep).lower()})
+                            save_everystep = {str(save_everystep).lower()},
+                            saveat = {saveat})
             end
     end
     """)

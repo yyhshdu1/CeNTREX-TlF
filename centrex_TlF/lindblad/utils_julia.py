@@ -492,16 +492,20 @@ def solve_problem_parameter_scan(
         distributed_method = "EnsembleDistributed()",
         abstol = 1e-7, reltol = 1e-4, save_everystep = True,
         callback = None, ensemble_problem_name = "ens_prob",
-        trajectories = None
+        trajectories = None,
+        saveat = None
     ):
     if trajectories is None:
         trajectories = "size(params)[1]"
+    if saveat is None:
+        saveat = "[]"
     if callback is not None:
         Main.eval(f"""
             sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
                         abstol = {abstol}, reltol = {reltol}, 
                         trajectories = {trajectories}, callback = {callback},
-                        save_everystep = {str(save_everystep).lower()}
+                        save_everystep = {str(save_everystep).lower()},
+                        saveat = {saveat}
                     )
         """)
     else:
@@ -509,7 +513,8 @@ def solve_problem_parameter_scan(
             sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
                         abstol = {abstol}, reltol = {reltol}, 
                         trajectories = {trajectories},
-                        save_everystep = {str(save_everystep).lower()}
+                        save_everystep = {str(save_everystep).lower()},
+                        saveat = {saveat}
                     )
         """)  
 
