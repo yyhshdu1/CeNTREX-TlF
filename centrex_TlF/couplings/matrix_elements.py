@@ -8,7 +8,7 @@ from centrex_TlF.couplings.utils_sqlite import (
 )
 
 def calculate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]), 
-                                reduced = False):
+                                reduced = False, normalize_pol = True):
     """calculate electric dipole matrix elements between mixed states
 
     Args:
@@ -17,6 +17,8 @@ def calculate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
         pol_vec (np.ndarray, optional): polarization vector. 
                                         Defaults to np.array([1,1,1]).
         reduced (bool, optional): [description]. Defaults to False.
+        normalize_pol (bool, optional): normalize the polarization vector to 1, 
+                                        defaults to True.
 
     Returns:
         complex: matrix element between bra and ket
@@ -24,6 +26,9 @@ def calculate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
     ME = 0
     bra = bra.transform_to_omega_basis()
     ket = ket.transform_to_omega_basis()
+
+    if normalize_pol:
+        pol_vec = np.asarray(pol_vec) / np.linalg.norm(pol_vec)
 
     for amp_bra, basis_bra in bra.data:
         for amp_ket, basis_ket in ket.data:
@@ -34,7 +39,8 @@ def calculate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
     return ME
 
 def generate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
-                                reduced = False, con = None):
+                                reduced = False, normalize_pol = True, 
+                                con = None):
     """calculate electric dipole matrix elements between mixed states
 
     Args:
@@ -43,15 +49,23 @@ def generate_ED_ME_mixed_state(bra, ket, pol_vec = np.array([1,1,1]),
         pol_vec (np.ndarray, optional): polarization vector. 
                                         Defaults to np.array([1,1,1]).
         reduced (bool, optional): [description]. Defaults to False.
+        normalize_pol (bool, optional): normalize the polarization vector to 1, 
+                                        defaults to True.
 
     Returns:
         complex: matrix element between bra and ket
     """
     if not con:
-        return calculate_ED_ME_mixed_state(bra, ket, pol_vec, reduced)
+        return calculate_ED_ME_mixed_state(bra, ket, pol_vec, reduced, 
+                                            normalize_pol
+                                        )
     ME = 0
     bra = bra.transform_to_omega_basis()
     ket = ket.transform_to_omega_basis()
+
+    if normalize_pol:
+        pol_vec = np.asarray(pol_vec) / np.linalg.norm(pol_vec)
+
 
     if reduced:
         retrieve = retrieve_ED_ME_coupled_sqlite_single_rme
