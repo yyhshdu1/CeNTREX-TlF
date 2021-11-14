@@ -3,6 +3,7 @@ import sympy as smp
 from julia import Main
 from pathlib import Path
 from sympy import Symbol
+from sympy.utilities.lambdify import lambdify
 
 __all__ = [
     'initialize_julia', 'generate_ode_fun_julia', 'setup_variables_julia',
@@ -72,6 +73,7 @@ type_conv = {
             'float64': 'Float64', 'int32': 'Int32', 'complex128': 'ComplexF64',
             'list': 'Array', 'ndarray': 'Array'
             }
+julia_funcs = ["gaussian_2d", "phase_modulation", "square_wave", "multipass_2d_intensity"]
 
 class odeParameters:
     def __init__(self, *args, **kwargs):
@@ -269,6 +271,77 @@ class odeParameters:
         for par in self._parameters:
             rep += f"{par}={getattr(self, par)}, "
         return rep.strip(", ") + ")"
+    
+    def get_parameter_evolution(self, t, parameter):
+        """Get the time evolution of parameters in odeParameters.
+        Evaluates expressions in python if possible, otherwise calls julia to 
+        evaluate the expressions
+        
+        Args:
+            t (np.ndarray[float]): array of timestamps
+            parameter (str): parameter to evaluate over t
+
+        Returns:
+            np.ndarray : array with values of parameter corresponding to t
+            
+        """
+        # get a list of all parameters in odeParameters
+        parameters = self._parameters + self._compound_vars
+        # check if `parameter` is defined in odeParameters
+        assert parameter in parameters, f"{parameter} not defined in odeParameters"
+        # if `parameter` is not a compound variable, an array of size t of 
+        # parameter
+        if parameter in self._parameters:
+            return np.ones(len(t)) * getattr(self, str(parameter))
+        elif parameter in self._compound_vars:
+            expression = getattr(self, str(parameter))
+            # parse expression string to sympy equation
+            expression = smp.parsing.sympy_parser.parse_expr(expression)
+            while True:
+                symbols_in_expression = [sym for sym in expression.free_symbols if sym is not smp.Symbol('t')]
+                symbols_in_expression = [str(sym) for sym in symbols_in_expression]
+                compound_bool = [
+                                    sym in self._compound_vars 
+                                    for sym in symbols_in_expression
+                                ]
+                # if any of the symbols in the expression are compound variables
+                # fetch the related compound expression and insert it in the 
+                # expression
+                if np.any(compound_bool):
+                    for idx in np.where(compound_bool)[0]:
+                        compound_var = smp.parsing.sympy_parser.parse_expr(
+                                        getattr(self, symbols_in_expression[idx])
+                                    )
+                        expression = expression.subs(symbols_in_expression[idx], compound_var)
+                else:
+                    # break if none of the symbols in the expression are compound
+                    # variables
+                    break
+            
+            # substitute the numerical variables for the expressions
+            symbols_in_expression = [sym for sym in expression.free_symbols if sym is not smp.Symbol('t')]
+            for sym in symbols_in_expression:
+                expression = expression.subs(sym, getattr(self, str(sym)))
+            functions_in_expression = [
+                str(fn).split("(")[0] for fn in expression.atoms(smp.Function)
+            ]
+            # check if any of the functions are special julia defined functions
+            if np.any([fn in julia_funcs for fn in functions_in_expression]):
+                expression = str(expression)
+                # broadcast the function, allows for input of an array of t
+                for fn in julia_funcs:
+                    expression = expression.replace(fn, f"{fn}.")
+                # evaluate the specified parameter expression in julia
+                Main.eval(f"_tmp_func(t) = {str(expression)}")
+                return Main._tmp_func(t)
+            else:
+                # evaluate the specified parameter expression in python
+                func = lambdify(smp.Symbol("t"), expression, modules = ["numpy", "scipy"])
+                return func(t)
+
+                    
+
+
 
 def setup_parameter_scan_1D(odePar, parameter, values):
     if isinstance(parameter, (list, tuple)):
@@ -472,17 +545,20 @@ def setup_problem_parameter_scan(odepars: odeParameters, tspan: list,
         """)
 
 def solve_problem(method = "Tsit5()", abstol = 1e-7, reltol = 1e-4, 
-                callback = None, problem_name = "prob", progress = False):
+                dt = 1e-8, callback = None, problem_name = "prob", 
+                progress = False):
     if callback is not None:
         Main.eval(f"""
             sol = solve({problem_name}, {method}, abstol = {abstol}, 
-                        reltol = {reltol}, progress = {str(progress).lower()}, 
+                        reltol = {reltol}, dt = {dt}, 
+                        progress = {str(progress).lower()}, 
                         callback = {callback}    
                     )
         """)
     else:
         Main.eval(f"""
-            sol = solve({problem_name}, {method}, abstol = {abstol}, reltol = {reltol},
+            sol = solve({problem_name}, {method}, abstol = {abstol}, 
+                        reltol = {reltol}, dt = {dt},
                         progress = {str(progress).lower()}    
                     )
         """)
@@ -490,7 +566,7 @@ def solve_problem(method = "Tsit5()", abstol = 1e-7, reltol = 1e-4,
 def solve_problem_parameter_scan(
         method = "Tsit5()", 
         distributed_method = "EnsembleDistributed()",
-        abstol = 1e-7, reltol = 1e-4, save_everystep = True,
+        abstol = 1e-7, reltol = 1e-4, dt = 1e-8, save_everystep = True,
         callback = None, ensemble_problem_name = "ens_prob",
         trajectories = None,
         saveat = None
@@ -502,7 +578,7 @@ def solve_problem_parameter_scan(
     if callback is not None:
         Main.eval(f"""
             sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
-                        abstol = {abstol}, reltol = {reltol}, 
+                        abstol = {abstol}, reltol = {reltol}, dt = {dt},
                         trajectories = {trajectories}, callback = {callback},
                         save_everystep = {str(save_everystep).lower()},
                         saveat = {saveat}
@@ -511,7 +587,7 @@ def solve_problem_parameter_scan(
     else:
         Main.eval(f"""
             sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
-                        abstol = {abstol}, reltol = {reltol}, 
+                        abstol = {abstol}, reltol = {reltol}, dt = {dt}
                         trajectories = {trajectories},
                         save_everystep = {str(save_everystep).lower()},
                         saveat = {saveat}
