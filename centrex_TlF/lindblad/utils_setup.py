@@ -7,7 +7,7 @@ from centrex_TlF.hamiltonian.generate_reduced_hamiltonian import (
     generate_total_reduced_hamiltonian
 )
 from centrex_TlF.couplings.coupling_matrix import (
-    generate_coupling_field_automatic
+    generate_coupling_field, generate_coupling_field_automatic
 )
 from centrex_TlF.lindblad.generate_hamiltonian import (
     generate_total_symbolic_hamiltonian
@@ -78,15 +78,31 @@ def generate_OBE_system(system_parameters, transitions,
         )
     if verbose:
         logger.info("generate_OBE_system: 2/6 -> Generating the couplings corresponding to the transitions")
-    couplings = [
-        generate_coupling_field_automatic(
-            transition.ground,
-            transition.excited,
-            H_int, QN, V_ref_int, 
-            pol_vec = transition.polarizations,
-            nprocs = system_parameters.nprocs,)
-        for transition in transitions
-    ]
+    couplings = []
+    for transition in transitions:
+        if transition.ground_main is not None and transition.excited_main is not None:
+            couplings.append(
+                generate_coupling_field(
+                    transition.ground_main,
+                    transition.excited_main,
+                    transition.ground,
+                    transition.excited,
+                    H_int, QN, V_ref_int, 
+                    pol_vec = transition.polarizations,
+                    pol_main = transition.polarizations[0],
+                    nprocs = system_parameters.nprocs
+                )
+            )
+        else:
+            couplings.append(
+                generate_coupling_field_automatic(
+                    transition.ground,
+                    transition.excited,
+                    H_int, QN, V_ref_int, 
+                    pol_vec = transition.polarizations,
+                    nprocs = system_parameters.nprocs
+                )
+            )
 
     if verbose:
         logger.info("generate_OBE_system: 3/6 -> Generating the symbolic Hamiltonian")

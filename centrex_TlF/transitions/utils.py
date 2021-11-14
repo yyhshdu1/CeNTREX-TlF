@@ -16,6 +16,7 @@ def check_transition_coupled_allowed(state1, state2, ΔmF_allowed,
     Returns:
         tuple: (allowed boolean, error message)
     """
+    Fg = state1.F
     ΔF = int(state2.F - state1.F)
     ΔmF = int(state2.mF - state1.mF)
     ΔP = int(state2.P - state1.P)
@@ -23,7 +24,7 @@ def check_transition_coupled_allowed(state1, state2, ΔmF_allowed,
     flag_ΔP = np.abs(ΔP) != 2
     flag_ΔF = np.abs(ΔF) > 1
     flag_ΔmF = np.abs(ΔmF) != ΔmF_allowed
-    flag_ΔFΔmF = (not flag_ΔmF) & (ΔF == 0 & ΔmF == 0)
+    flag_ΔFΔmF = (not flag_ΔmF) & (Fg == 0 & ΔF == 0 & ΔmF == 0)
     
     errors = ""
     if flag_ΔP:
