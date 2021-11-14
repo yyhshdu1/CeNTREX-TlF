@@ -340,6 +340,8 @@ class odeParameters:
                 res = func(t)
                 if np.shape(res) == ():
                     return np.ones(len(t))*res
+                else:
+                    return res
                     
 
 
