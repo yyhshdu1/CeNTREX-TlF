@@ -337,8 +337,9 @@ class odeParameters:
             else:
                 # evaluate the specified parameter expression in python
                 func = lambdify(smp.Symbol("t"), expression, modules = ["numpy", "scipy"])
-                return func(t)
-
+                res = func(t)
+                if np.shape(res) == ():
+                    return np.ones(len(t))*res
                     
 
 
