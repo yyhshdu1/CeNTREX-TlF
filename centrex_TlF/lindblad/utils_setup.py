@@ -198,7 +198,7 @@ def setup_OBE_system_julia(system_parameters, ode_parameters, transitions,
         logger.info("setup_OBE_system_julia: 3/3 -> Defining the ODE equation and parameters in Julia")
         logging.basicConfig(level=logging.WARNING)
     generate_ode_fun_julia(obe_system.preamble, obe_system.code_lines)
-    Main.eval(f"Γ = {system_parameters.Γ}")
+    Main.eval(f"@everywhere Γ = {system_parameters.Γ}")
     ode_parameters.generate_p_julia()
     if not full_output:
         return obe_system.QN
