@@ -546,6 +546,7 @@ def setup_problem_parameter_scan(odepars: odeParameters, tspan: list,
             ens_{problem_name} = EnsembleProblem({problem_name}, 
                                                     prob_func = prob_func)
         """)
+    return f"ens_{problem_name}"
 
 def solve_problem(method = "Tsit5()", abstol = 1e-7, reltol = 1e-4, 
                 dt = 1e-8, callback = None, problem_name = "prob", 
