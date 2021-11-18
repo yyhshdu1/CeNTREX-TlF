@@ -27,7 +27,7 @@ __all__ = [
 
 def generate_coupling_matrix(QN, ground_states, excited_states, 
                             pol_vec = np.array([0,0,1]), reduced = False,
-                            nprocs = 1):
+                            normalize_pol = True, nprocs = 1):
     """generate optical coupling matrix for given ground and excited states
     Checks if couplings are already pre-cached, otherwise falls back to
     calculate_coupling_matrix.
@@ -38,6 +38,8 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
         excited_states (list): list of excited states
         pol_vec (np.ndarray, optional): polarization vector. Defaults to np.array([0,0,1]).
         reduced (bool, optional): [description]. Defaults to False.
+        normalize_pol (bool, optional): Normalize the polarization vector.
+                                        Defaults to True.
         nrpocs (int): # processes to use for multiprocessing
 
     Returns:
@@ -51,9 +53,6 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
     pre_cached = check_states_in_ED_ME_coupled(Jg, Je, pol_vec)
 
     if pre_cached:
-        if nprocs > 1:
-            logging.warning("generate_coupling_matrix: Pre-cached calculations, multiprocessing not used")
-
         # connect to sqlite3 database on file, not used when multiprocessing
         path = Path(__file__).parent.parent / "pre_calculated"
         db = path / "matrix_elements.db"
@@ -77,6 +76,7 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
                                             excited_state, 
                                             pol_vec = pol_vec, 
                                             reduced = reduced,
+                                            normalize_pol = normalize_pol,
                                             con = con)
         con.close()
         H = H + H.conj().T
@@ -87,7 +87,7 @@ def generate_coupling_matrix(QN, ground_states, excited_states,
 
 def calculate_coupling_matrix(QN, ground_states, excited_states, 
                             pol_vec = np.array([0,0,1]), reduced = False,
-                            nprocs = 1):
+                            normalize_pol = True, nprocs = 1):
     """calculate optical coupling matrix for given ground and excited states
 
     Args:
@@ -96,6 +96,8 @@ def calculate_coupling_matrix(QN, ground_states, excited_states,
         excited_states (list): list of excited states
         pol_vec (np.ndarray, optional): polarization vector. Defaults to np.array([0,0,1]).
         reduced (bool, optional): [description]. Defaults to False.
+        normalize_pol (bool, optional): Normalize the polarization vector.
+                                        Defaults to True.
         nrpocs (int): # processes to use for multiprocessing
 
     Returns:
@@ -124,7 +126,8 @@ def calculate_coupling_matrix(QN, ground_states, excited_states,
                                             ground_state, 
                                             excited_state, 
                                             pol_vec = pol_vec, 
-                                            reduced = reduced
+                                            reduced = reduced,
+                                            normalize_pol = normalize_pol
                                             )
 
     # make H hermitian
@@ -330,6 +333,7 @@ def generate_coupling_field_automatic(
                                             excited_states, 
                                             pol_vec = pol, 
                                             reduced = False,
+                                            normalize_pol = True, 
                                             nprocs = nprocs)
 
         coupling[np.abs(coupling) < relative_coupling*np.max(np.abs(coupling))] = 0
@@ -421,6 +425,7 @@ def calculate_coupling_field_automatic(
                                             excited_states, 
                                             pol_vec = pol, 
                                             reduced = False,
+                                            normalize_pol = True, 
                                             nprocs = nprocs)
 
         coupling[np.abs(coupling) < relative_coupling*np.max(np.abs(coupling))] = 0

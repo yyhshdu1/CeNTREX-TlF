@@ -9,8 +9,9 @@ setuptools.setup(
     packages = setuptools.find_packages(),
     install_requires = [
         'numpy',
-        'sympy',
+        'sympy>=1.9',
         'tqdm',
+        'julia',
         ],
     data_files = [('centrex_TlF/pre_calculated', 
                     ['centrex_TlF/pre_calculated/transformation.db',

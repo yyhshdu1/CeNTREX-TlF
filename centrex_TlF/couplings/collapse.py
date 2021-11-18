@@ -6,7 +6,8 @@ from centrex_TlF.couplings.utils_compact import (
     compact_C_array, compact_C_array_indices
 )
 from centrex_TlF.states.utils import (
-    get_indices_quantumnumbers
+    get_indices_quantumnumbers,
+    QuantumSelector
 )
 from centrex_TlF.states.utils_compact import (
     compact_QN_coupled_indices
@@ -58,6 +59,8 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
     if slice_compact:
         C_array = compact_C_array(C_array, gamma, slice_compact)
     elif qn_compact:
+        if isinstance(qn_compact, QuantumSelector):
+            qn_compact = [qn_compact]
         QN_compact = copy.deepcopy(QN)        
         for qnc in qn_compact:
             indices_compact = get_indices_quantumnumbers(qnc, QN_compact)

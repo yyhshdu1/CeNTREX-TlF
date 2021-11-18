@@ -7,7 +7,8 @@ from centrex_TlF.couplings import (
     generate_total_hamiltonian
 )
 from centrex_TlF.states.utils import (
-    get_indices_quantumnumbers
+    get_indices_quantumnumbers,
+    QuantumSelector
 )
 from centrex_TlF.states.utils_compact import (
     compact_QN_coupled_indices
@@ -117,12 +118,14 @@ def generate_total_symbolic_hamiltonian(QN, H_int, couplings, transitions,
     if isinstance(transitions[0], TransitionSelector):
         return generate_total_symbolic_hamiltonian_TransitionSelector(
                                             QN, H_int, couplings, transitions,
-                                        slice_compact = None, qn_compact = None
+                                        slice_compact = slice_compact, 
+                                        qn_compact = qn_compact
                                         )
     elif isinstance(transitions[0], dict):
         return generate_total_symbolic_hamiltonian_transitiondict(
                                             QN, H_int, couplings, transitions,
-                                        slice_compact = None, qn_compact = None
+                                        slice_compact = slice_compact, 
+                                        qn_compact = qn_compact
                                         )
     else:
         raise AssertionError("transitions required to be a list of TransitionSelectors or a list of dicts")
@@ -168,6 +171,8 @@ def generate_total_symbolic_hamiltonian_transitiondict(QN, H_int, couplings, tra
     if slice_compact:
         H_symbolic = delete_row_column_symbolic(H_symbolic, slice_compact)
     elif qn_compact:
+        if isinstance(qn_compact, QuantumSelector):
+            qn_compact = [qn_compact]
         QN_compact = copy.deepcopy(QN)
         for qnc in qn_compact:
             indices_compact = get_indices_quantumnumbers(qnc, QN_compact)
@@ -214,10 +219,11 @@ def generate_total_symbolic_hamiltonian_TransitionSelector(QN, H_int, couplings,
 
     H_symbolic = generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs, Δs, 
                                                                         pols)
-
     if slice_compact:
         H_symbolic = delete_row_column_symbolic(H_symbolic, slice_compact)
-    elif qn_compact:
+    elif qn_compact is not None:
+        if isinstance(qn_compact, QuantumSelector):
+            qn_compact = [qn_compact]
         QN_compact = copy.deepcopy(QN)
         for qnc in qn_compact:
             indices_compact = get_indices_quantumnumbers(qnc, QN_compact)

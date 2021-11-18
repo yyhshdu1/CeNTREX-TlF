@@ -2,7 +2,7 @@ import numpy as np
 from sympy import Symbol
 import scipy.constants as cst
 from typing import Union
-# from centrex_TlF import State
+from centrex_TlF.states import State
 from dataclasses import dataclass
 from scipy.sparse import kron, eye
 from centrex_TlF.utils import (
@@ -158,6 +158,8 @@ class TransitionSelector:
     δ: Symbol
     description: str = None
     type: str = None
+    ground_main: State = None
+    excited_main: State = None
 
 # @dataclass
 # class Coupling:
