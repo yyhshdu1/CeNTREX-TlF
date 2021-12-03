@@ -367,7 +367,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     """)
 
 def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
-    pars = str(odePar.p).strip('[]').split(',')
+    pars = str(odePar.p)[1:-1].split(',')
 
     for idN, parameter in enumerate(parameters):
         if isinstance(parameter, (list, tuple)):
