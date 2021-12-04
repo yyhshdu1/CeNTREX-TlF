@@ -366,6 +366,27 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     end
     """)
 
+def setup_parameter_scan_zipped(odePar, parameters, values):
+    pars = str(odePar.p)[1:-1].split(',')
+
+    for idN, parameter in enumerate(parameters):
+        if isinstance(parameter, (list, tuple)):
+            indices = [odePar.get_index_parameter(par) for par in parameter]
+        else:
+            indices = [odePar.get_index_parameter(parameter)]
+        for idx in indices:
+            pars[idx] = f"params[i,{idN+1}]"
+    pars = "[" + ",".join(pars) + "]"
+    params = np.array(list(zip(*values)))
+    
+    Main.params = params    
+    Main.eval(f"""
+    @everywhere params = $params
+    @everywhere function prob_func(prob, i, repeat)
+        remake(prob, p = {pars})
+    end
+    """)
+
 def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
     pars = str(odePar.p)[1:-1].split(',')
 
