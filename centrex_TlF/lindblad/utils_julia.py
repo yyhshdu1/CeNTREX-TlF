@@ -378,7 +378,7 @@ def setup_parameter_scan_zipped(odePar, parameters, values):
             pars[idx] = f"params[i,{idN+1}]"
     pars = "[" + ",".join(pars) + "]"
     params = np.array(list(zip(*values)))
-    
+
     Main.params = params    
     Main.eval(f"""
     @everywhere params = $params
@@ -571,20 +571,33 @@ def setup_problem_parameter_scan(odepars: odeParameters, tspan: list,
 
 def solve_problem(method = "Tsit5()", abstol = 1e-7, reltol = 1e-4, 
                 dt = 1e-8, callback = None, problem_name = "prob", 
-                progress = False):
+                progress = False, saveat = None, dtmin = None, maxiters = None):
+    if saveat is None:
+        saveat = "[]"
+    if dtmin is None:
+        dtmin = "nothing"
+        force_dtmin = 'false'
+    else:
+        force_dtmin = 'true'
+    if maxiters is None:
+        maxiters = 1e5
     if callback is not None:
         Main.eval(f"""
             sol = solve({problem_name}, {method}, abstol = {abstol}, 
                         reltol = {reltol}, dt = {dt}, 
                         progress = {str(progress).lower()}, 
-                        callback = {callback}    
+                        callback = {callback}, saveat = {saveat}, 
+                        dtmin = {dtmin}, maxiters = {maxiters}, 
+                        force_dtmin = {force_dtmin}
                     )
         """)
     else:
         Main.eval(f"""
             sol = solve({problem_name}, {method}, abstol = {abstol}, 
                         reltol = {reltol}, dt = {dt},
-                        progress = {str(progress).lower()}    
+                        progress = {str(progress).lower()}, saveat = {saveat},
+                        dtmin = {dtmin}, maxiters = {maxiters},
+                        force_dtmin = {force_dtmin}
                     )
         """)
 
@@ -612,7 +625,7 @@ def solve_problem_parameter_scan(
     else:
         Main.eval(f"""
             sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
-                        abstol = {abstol}, reltol = {reltol}, dt = {dt}
+                        abstol = {abstol}, reltol = {reltol}, dt = {dt},
                         trajectories = {trajectories},
                         save_everystep = {str(save_everystep).lower()},
                         saveat = {saveat}
@@ -641,7 +654,8 @@ def get_results():
     t = Main.eval("sol.t")
     return t, results
 
-def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
+def do_simulation_single(odepars, tspan, ρ, terminate_expression = None, 
+        dt = 1e-8, saveat = None, dtmin = None, maxiters = None):
     """Perform a single trajectory solve of the OBE equations for a specified 
     TlF system.
 
@@ -651,9 +665,14 @@ def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
         tspan (list, tuple): time range to solve for
         terminate_expression (str, optional): Expression that determines when to 
                                             stop integration. Defaults to None.
+        saveat (array or float, optional): save solution at timesteps given by 
+                                            saveat, either a list or every 
+                                            saveat
+        dtmin (float, optional): minimum dt allowed for adaptive timestepping
+        maxiters (float, optional): maximum number of steps allowed
 
     Returns:
-        tuple: tuple containing the timestamps and an n x m numpy arra, where
+        tuple: tuple containing the timestamps and an n x m numpy array, where
                 n is the number of states, and m the number of timesteps
     """
     callback_flag = False
@@ -662,9 +681,10 @@ def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
         callback_flag = True
     setup_problem(odepars, tspan, ρ)
     if callback_flag:
-        solve_problem(callback = "cb")
+        solve_problem(callback = "cb", saveat = saveat, dtmin = dtmin, dt = dt, 
+                        maxiters = maxiters)
     else:
-        solve_problem()
+        solve_problem(saveat = saveat, dtmin = dtmin, dt = dt, maxiters = maxiters)
     return get_results()
 
 def get_indices_diag_flattened(n):
