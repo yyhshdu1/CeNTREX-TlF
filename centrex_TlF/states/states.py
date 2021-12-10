@@ -11,7 +11,8 @@ __all__ = [
 
 class CoupledBasisState:
     # constructor
-    def __init__(self, F, mF, F1, J, I1, I2, Omega = None, P = None, electronic_state = None, energy = None, Ω = None):
+    def __init__(self, F, mF, F1, J, I1, I2, Omega = None, P = None, electronic_state = None, energy = None, Ω = None,
+        ν = None):
         self.F, self.mF  = F, mF
         self.F1 = F1
         self.J = J
@@ -26,7 +27,7 @@ class CoupledBasisState:
         self.energy = energy
         self.isCoupled = True
         self.isUncoupled = False
-        
+        self.ν = ν
     
     # equality testing
     def __eq__(self, other):
@@ -35,7 +36,8 @@ class CoupledBasisState:
                      and self.I1==other.I1 and self.I2==other.I2 \
                      and self.F1==other.F1 and self.J==other.J \
                      and self.Omega == other.Omega and self.P == other.P \
-                     and self.electronic_state == other.electronic_state 
+                     and self.electronic_state == other.electronic_state \
+                     and self.ν == other.ν
 
     # inner product
     def __matmul__(self, other):
@@ -93,6 +95,7 @@ class CoupledBasisState:
         else:
             P = None
         Omega = self.Omega
+        ν = self.ν
 
         string = f"J = {J}, F₁ = {F1}, F = {F}, mF = {mF}, I₁ = {I1}, I₂ = {I2}"
     
@@ -102,6 +105,8 @@ class CoupledBasisState:
             string = f"{string}, P = {P}"
         if Omega != None:
             string = f"{string}, Ω = {Omega}"
+        if ν != None:
+            string = f"{string}, ν = {ν}"
         return "|"+string+">"
 
     def print_quantum_numbers(self, printing = False):

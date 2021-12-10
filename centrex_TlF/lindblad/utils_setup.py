@@ -2,6 +2,8 @@ import logging
 import numpy as np
 from julia import Main
 from dataclasses import dataclass
+
+from numpy.lib.arraysetops import isin
 from centrex_TlF.couplings.collapse import collapse_matrices
 from centrex_TlF.hamiltonian.generate_reduced_hamiltonian import (
     generate_total_reduced_hamiltonian
@@ -24,6 +26,9 @@ from centrex_TlF.states.generate_states import (
 from centrex_TlF.lindblad.utils_julia import (
     initialize_julia, generate_ode_fun_julia
 )
+from centrex_TlF.lindblad.utils_decay import (
+    add_levels_symbolic_hamiltonian, add_states_QN, add_decays_C_arrays
+)
 
 __all__ = [
     'generate_OBE_system', 'setup_OBE_system_julia'
@@ -44,9 +49,12 @@ class OBESystem:
     full_output: bool = False
     preamble: str = ""
     QN_original: np.ndarray = None
+    decay_channels: np.ndarray = None
+
 
 def generate_OBE_system(system_parameters, transitions,
-                        qn_compact = None, verbose = False):
+                        qn_compact = None, decay_channels = None, 
+                        verbose = False):
     """Convenience function for generating the symbolic OBE system of equations
     and Julia code.
 
@@ -122,6 +130,26 @@ def generate_OBE_system(system_parameters, transitions,
                 QN, ground_states, excited_states, gamma = system_parameters.Γ,
                 qn_compact = qn_compact
             )
+
+    if decay_channels is not None:
+        if not isinstance(decay_channels, (list, np.ndarray)):
+            decay_channels = np.ndarray(decay_channels)
+        if qn_compact is not None:
+            indices, H_symbolic = add_levels_symbolic_hamiltonian(
+                                    H_symbolic, decay_channels, QN_compact, 
+                                    excited_states
+                                )
+            QN_compact = add_states_QN(decay_channels, QN_compact, indices)
+            C_array = add_decays_C_arrays(decay_channels, indices, QN_compact,
+                                            C_array, system_parameters.Γ)
+        else:
+            indices, H_symbolic = add_levels_symbolic_hamiltonian(
+                                    H_symbolic, decay_channels, QN, 
+                                    excited_states
+                                )
+            QN = add_states_QN(decay_channels, QN_compact, indices)
+            C_array = add_decays_C_arrays(decay_channels, indices, QN,
+                                            C_array, system_parameters.Γ)
     if verbose:
         logger.info("generate_OBE_system: 5/6 -> Transforming the Hamiltonian and collapse matrices into a symbolic system of equations")
     system = generate_system_of_equations_symbolic(
@@ -142,13 +170,14 @@ def generate_OBE_system(system_parameters, transitions,
                     H_int = H_int, V_ref_int = V_ref_int, C_array = C_array, 
                     system = system, 
                     code_lines = code_lines,
-                    QN_original = QN_original
+                    QN_original = QN_original,
+                    decay_channels = decay_channels
                 )
     return obe_system
 
 def setup_OBE_system_julia(system_parameters, ode_parameters, transitions, 
-                            qn_compact = None, full_output = False, 
-                            verbose = False):
+                            qn_compact = None, full_output = False,
+                            decay_channels = None, verbose = False):
     """Convenience function for generating the OBE system and initializing it in 
     Julia
 
@@ -179,9 +208,10 @@ def setup_OBE_system_julia(system_parameters, ode_parameters, transitions,
                         H_symbolic, C_array, system, code_lines, preamble
     """
     obe_system = generate_OBE_system(system_parameters, transitions,
-                                        qn_compact = qn_compact, 
-                                        verbose = verbose
-                                    )
+                                    qn_compact = qn_compact, 
+                                    decay_channels = decay_channels,
+                                    verbose = verbose
+                                )
     obe_system.full_output = full_output
     if verbose:
         logging.basicConfig(level=logging.INFO)
