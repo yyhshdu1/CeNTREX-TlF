@@ -2,7 +2,7 @@ import copy
 import logging
 from centrex_TlF.couplings.utils import TransitionSelector
 import numpy as np
-from sympy import zeros, Symbol
+from sympy import zeros, Symbol, eye
 from centrex_TlF.couplings import (
     generate_total_hamiltonian
 )
@@ -21,7 +21,7 @@ __all__ = [
     'generate_total_symbolic_hamiltonian'
 ]
 
-def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
+def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  δs = None,
                                     pols = None):
 
     n_states = H_rot.shape[0]
@@ -33,12 +33,12 @@ def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
         logging.warning("Warning in generate_symbolic_hamiltonian: supplied " +
                     f"Ωs length does not match # couplings ({len(Ωs)} != {len(couplings)})"
             )
-    if not Δs:
-        Δs = [Symbol(f'Δ{idx}') for idx in range(len(couplings))]
-    if len(Δs) != len(couplings):
-        Δs = [Symbol(f'Δ{idx}') for idx in range(len(couplings))]
+    if not δs:
+        δs = [Symbol(f'δ{idx}') for idx in range(len(couplings))]
+    if len(δs) != len(couplings):
+        δs = [Symbol(f'δ{idx}') for idx in range(len(couplings))]
         logging.warning("Warning in generate_symbolic_hamiltonian: supplied " +
-                    f"Δs length does not match # couplings ({len(Δs)} != {len(couplings)})"
+                    f"δs length does not match # couplings ({len(δs)} != {len(couplings)})"
             )
 
     # initialize empty Hamiltonian
@@ -66,20 +66,33 @@ def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
                     hamiltonian += (Ω/main_coupling)/2 * field['field'] 
             else:
                 hamiltonian += (Ω/main_coupling)/2 * field['field']
+
+    # add HFS structure
+    hamiltonian += H_rot
+
     # add detunings to the hamiltonian
-    for idc, (Δ, coupling) in enumerate(zip(Δs, couplings)):
+    for idc, (δ, coupling) in enumerate(zip(δs, couplings)):
         # check if Δ symbol exists, else create
-        if not Δ:
+        if not δ:
             _ = idc
             while True:
-                Δ = Symbol(f'Δ{_}')
+                δ = Symbol(f'δ{_}')
                 _ += 1
-                if Δ not in Δs:
+                if δ not in δs:
                     break
-            Δs[idc] = Δ
-        indices = [QN.index(s) for s in coupling['excited states']]
-        for idx in indices:
-            hamiltonian[idx,idx] += Δ
+            δs[idc] = δ
+        indices_ground = [QN.index(s) for s in coupling['ground states']]
+        indices_excited = [QN.index(s) for s in coupling['excited states']]
+        idg = QN.index(coupling['ground main'])
+        ide = QN.index(coupling['excited main'])
+        # subtract excited state energy over diagonal for first entry:
+        if idc == 0:
+            hamiltonian -= eye(hamiltonian.shape[0])*hamiltonian[ide,ide]
+        Δ = hamiltonian[ide,ide] - hamiltonian[idg,idg]
+        for idx in indices_ground:
+            hamiltonian[idx, idx] += Δ
+        for idx in indices_ground:
+            hamiltonian[idx,idx] += -δ
 
     # ensure hermitian Hamiltonian for complex Ω
     # complex conjugate Rabi rates
@@ -89,7 +102,6 @@ def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs = None,  Δs = None,
             for Ω,Ωᶜ in zip(Ωs, Ωsᶜ):
                 hamiltonian[idx,idy] = hamiltonian[idx,idy].subs(Ω, Ωᶜ)
     
-    hamiltonian += H_rot
 
     return hamiltonian#, symbols
 
@@ -165,7 +177,7 @@ def generate_total_symbolic_hamiltonian_transitiondict(QN, H_int, couplings, tra
         else:
             pols.append(transition['polarization symbols'])
 
-    H_symbolic = generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs, Δs, 
+    H_symbolic = generate_symbolic_hamiltonian(QN, H_int, couplings, Ωs, Δs, 
                                                                         pols)
 
     if slice_compact:
@@ -217,7 +229,7 @@ def generate_total_symbolic_hamiltonian_TransitionSelector(QN, H_int, couplings,
         else:
             pols.append(transition.polarization_symbols)
 
-    H_symbolic = generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs, Δs, 
+    H_symbolic = generate_symbolic_hamiltonian(QN, H_int, couplings, Ωs, Δs, 
                                                                         pols)
     if slice_compact:
         H_symbolic = delete_row_column_symbolic(H_symbolic, slice_compact)
