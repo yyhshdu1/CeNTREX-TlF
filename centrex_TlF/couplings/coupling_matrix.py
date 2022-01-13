@@ -163,15 +163,15 @@ def generate_coupling_field(ground_main_approx, excited_main_approx,
         excited_main.find_largest_component(),
         ΔmF_allowed = 0 if pol_main[2] != 0 else 1
     )
-    assert_msg = f"main coupling element small, {ME_main:.2e}" + \
-                  ", check states and/or polarization"
-    assert np.abs(ME_main) > 1e-2, assert_msg
+    # assert_msg = f"main coupling element small, {ME_main:.2e}" + \
+    #               ", check states and/or polarization"
+    # assert np.abs(ME_main) > 1e-2, assert_msg
 
     couplings = {
         'ground main': ground_main,
         'excited main': excited_main,
         'main coupling': ME_main,
-        'ground_states': ground_states,
+        'ground states': ground_states,
         'excited states': excited_states,
         'D': generate_D(H_rot, QN, ground_main, excited_main, excited_states),
         'fields': []
@@ -219,15 +219,15 @@ def calculate_coupling_field(ground_main_approx, excited_main_approx,
         excited_main.find_largest_component(),
         ΔmF_allowed = 0 if pol_main[2] != 0 else 1
     )
-    assert_msg = f"main coupling element small, {ME_main:.2e}" + \
-                  ", check states and/or polarization"
-    assert np.abs(ME_main) > 1e-2, assert_msg
+    # assert_msg = f"main coupling element small, {ME_main:.2e}" + \
+    #               ", check states and/or polarization"
+    # assert np.abs(ME_main) > 1e-2, assert_msg
 
     couplings = {
         'ground main': ground_main,
         'excited main': excited_main,
         'main coupling': ME_main,
-        'ground_states': ground_states,
+        'ground states': ground_states,
         'excited states': excited_states,
         'D': generate_D(H_rot, QN, ground_main, excited_main, excited_states),
         'fields': []
@@ -313,15 +313,15 @@ def generate_coupling_field_automatic(
         excited_main.find_largest_component(),
         ΔmF_allowed = 0 if pol_main[2] != 0 else 1
     )
-    assert_msg = f"main coupling element small, {ME_main:.2e}" + \
-                  ", check states and/or polarization"
-    assert np.abs(ME_main) > 1e-2, assert_msg
+    # assert_msg = f"main coupling element small, {ME_main:.2e}" + \
+    #               ", check states and/or polarization"
+    # assert np.abs(ME_main) > 1e-2, assert_msg
 
     couplings = {
         'ground main': ground_main,
         'excited main': excited_main,
         'main coupling': ME_main,
-        'ground_states': ground_states,
+        'ground states': ground_states,
         'excited states': excited_states,
         'fields': []
     }
@@ -405,15 +405,15 @@ def calculate_coupling_field_automatic(
     ME_main = calculate_ED_ME_mixed_state(
                         excited_main, ground_main, pol_vec = pol_main)
 
-    assert_msg = f"main coupling element small, {ME_main:.2e}" + \
-                  ", check states and/or polarization"
-    assert np.abs(ME_main) > 1e-2, assert_msg
+    # assert_msg = f"main coupling element small, {ME_main:.2e}" + \
+    #               ", check states and/or polarization"
+    # assert np.abs(ME_main) > 1e-2, assert_msg
 
     couplings = {
         'ground main': ground_main,
         'excited main': excited_main,
         'main coupling': ME_main,
-        'ground_states': ground_states,
+        'ground states': ground_states,
         'excited states': excited_states,
         'fields': []
     }
