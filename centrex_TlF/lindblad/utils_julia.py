@@ -549,10 +549,14 @@ def setup_problem_parameter_scan(odepars: odeParameters, tspan: list,
                                 ρ: np.ndarray, parameters: list, 
                                 values: np.ndarray, dimensions: int = 1,
                                 problem_name = "prob", 
-                                output_func = None):
+                                output_func = None,
+                                zipped = False):
     setup_problem(odepars, tspan, ρ, problem_name)
     if dimensions == 1:
-        setup_parameter_scan_1D(odepars, parameters, values)
+        if zipped:
+            setup_parameter_scan_zipped(odepars, parameters, values)
+        else:
+            setup_parameter_scan_1D(odepars, parameters, values)
     else:
         setup_parameter_scan_ND(odepars, parameters, values)
     if output_func is not None:
