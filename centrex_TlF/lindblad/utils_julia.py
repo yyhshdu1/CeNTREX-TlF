@@ -352,11 +352,10 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     else:
         indices = [odePar.get_index_parameter(parameter)]
 
-    pars = str(odePar.p)[1:-1].split(',')
+    pars = list(odePar.p)
     for idx in indices:
         pars[idx] = "params[i]"
-    
-    pars = "[" + ",".join(pars) + "]"
+    pars = "[" + ",".join([str(p) for p in pars]) + "]"
     
     Main.params = values
     Main.eval(f"""
@@ -367,7 +366,7 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     """)
 
 def setup_parameter_scan_zipped(odePar, parameters, values):
-    pars = str(odePar.p)[1:-1].split(',')
+    pars = list(odePar.p)
 
     for idN, parameter in enumerate(parameters):
         if isinstance(parameter, (list, tuple)):
@@ -376,8 +375,9 @@ def setup_parameter_scan_zipped(odePar, parameters, values):
             indices = [odePar.get_index_parameter(parameter)]
         for idx in indices:
             pars[idx] = f"params[i,{idN+1}]"
-    pars = "[" + ",".join(pars) + "]"
     params = np.array(list(zip(*values)))
+
+    pars = "[" + ",".join([str(p) for p in pars]) + "]"
 
     Main.params = params    
     Main.eval(f"""
