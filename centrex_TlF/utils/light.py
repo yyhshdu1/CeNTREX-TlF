@@ -6,7 +6,9 @@ __all__ = [
     "calculate_power_from_rabi_gaussian_beam",
     "calculate_rabi_from_power_gaussian_beam", 
     "calculate_power_from_rabi_gaussian_beam_microwave",
-    "calculate_rabi_from_power_gaussian_beam_microwave"
+    "calculate_rabi_from_power_gaussian_beam_microwave",
+    "calculate_intensity_from_power_gaussian_beam",
+    "intensity_to_electric_field"
 ]
 
 def gaussian(x, μ, σ):
@@ -51,6 +53,21 @@ def generate_2D_multipass(X, Y, npasses, loss, σx, σy, spacing):
                                       σx, σy).sum(axis = 2)
     return multipass
 
+def calculate_intensity_from_power_gaussian_beam(power: float, σx: float, 
+                                                σy: float):
+    """Calculate the maximum laser intensity of a gaussian beam from the total 
+    laser power given the beam parameters σx and σy
+
+    Args:
+        power (float): beam power [W]
+        σx (float): beam standard deviation in x [m]
+        σy (float): beam standard deviation in y [m]
+
+    Returns:
+        float: intensity in W/m^2
+    """
+    return power/(2*np.pi*σx*σy)
+
 def calculate_power_from_rabi_gaussian_beam(
                                 Ω, main_coupling, σx, σy, D = 2.6675506e-30
                                 ):
@@ -78,6 +95,17 @@ def calculate_power_from_rabi_gaussian_beam(
     P = I* (2*np.pi*σx*σy)
 
     return P
+
+def intensity_to_electric_field(intensity):
+    """Convert intensity in W/m^2 to the electric field
+
+    Args:
+        intensity (float): intensity in W/m^2
+
+    Returns:
+        float: electric field E
+    """
+    return np.sqrt( (2/(cst.c*cst.epsilon_0)) * intensity)
 
 def calculate_rabi_from_power_gaussian_beam(
                                 P, main_coupling, σx, σy, D = 2.6675506e-30,
