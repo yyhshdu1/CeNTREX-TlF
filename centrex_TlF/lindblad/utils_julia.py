@@ -272,88 +272,88 @@ class odeParameters:
             rep += f"{par}={getattr(self, par)}, "
         return rep.strip(", ") + ")"
     
-def get_parameter_evolution(self, t, parameter):
-    """Get the time evolution of parameters in odeParameters.
-    Evaluates expressions in python if possible, otherwise calls julia to 
-    evaluate the expressions
+    def get_parameter_evolution(self, t, parameter):
+        """Get the time evolution of parameters in odeParameters.
+        Evaluates expressions in python if possible, otherwise calls julia to 
+        evaluate the expressions
 
-    Args:
-        t (np.ndarray[float]): array of timestamps
-        parameter (str): parameter to evaluate over t
+        Args:
+            t (np.ndarray[float]): array of timestamps
+            parameter (str): parameter to evaluate over t
 
-    Returns:
-        np.ndarray : array with values of parameter corresponding to t
+        Returns:
+            np.ndarray : array with values of parameter corresponding to t
 
-    """
-    # get a list of all parameters in odeParameters
-    parameters = self._parameters + self._compound_vars
-    # check if `parameter` is defined in odeParameters
-    assert parameter in parameters, f"{parameter} not defined in odeParameters"
-    # if `parameter` is not a compound variable, an array of size t of 
-    # parameter
-    if parameter in self._parameters:
-        return np.ones(len(t)) * getattr(self, str(parameter))
-    elif parameter in self._compound_vars:
-        expression = getattr(self, str(parameter))
-        # parse expression string to sympy equation
-        expression = smp.parsing.sympy_parser.parse_expr(expression)
-        while True:
+        """
+        # get a list of all parameters in odeParameters
+        parameters = self._parameters + self._compound_vars
+        # check if `parameter` is defined in odeParameters
+        assert parameter in parameters, f"{parameter} not defined in odeParameters"
+        # if `parameter` is not a compound variable, an array of size t of 
+        # parameter
+        if parameter in self._parameters:
+            return np.ones(len(t)) * getattr(self, str(parameter))
+        elif parameter in self._compound_vars:
+            expression = getattr(self, str(parameter))
+            # parse expression string to sympy equation
+            expression = smp.parsing.sympy_parser.parse_expr(expression)
+            while True:
+                symbols_in_expression = [sym for sym in expression.free_symbols if sym is not smp.Symbol('t')]
+                symbols_in_expression = [str(sym) for sym in symbols_in_expression]
+                compound_bool = [
+                                    sym in self._compound_vars 
+                                    for sym in symbols_in_expression
+                                ]
+                # if any of the symbols in the expression are compound variables
+                # fetch the related compound expression and insert it in the 
+                # expression
+                if np.any(compound_bool):
+                    for idx in np.where(compound_bool)[0]:
+                        compound_var = smp.parsing.sympy_parser.parse_expr(
+                                        getattr(self, symbols_in_expression[idx])
+                                    )
+                        expression = expression.subs(symbols_in_expression[idx], compound_var)
+                else:
+                    # break if none of the symbols in the expression are compound
+                    # variables
+                    break
+
+            # substitute the numerical variables for the expressions
             symbols_in_expression = [sym for sym in expression.free_symbols if sym is not smp.Symbol('t')]
-            symbols_in_expression = [str(sym) for sym in symbols_in_expression]
-            compound_bool = [
-                                sym in self._compound_vars 
-                                for sym in symbols_in_expression
-                            ]
-            # if any of the symbols in the expression are compound variables
-            # fetch the related compound expression and insert it in the 
-            # expression
-            if np.any(compound_bool):
-                for idx in np.where(compound_bool)[0]:
-                    compound_var = smp.parsing.sympy_parser.parse_expr(
-                                    getattr(self, symbols_in_expression[idx])
-                                )
-                    expression = expression.subs(symbols_in_expression[idx], compound_var)
+            array_symbols = []
+            for sym in symbols_in_expression:
+                # can't subs a symbol with a list, tuple or array
+                if isinstance(getattr(self, str(sym)), (list, tuple, np.ndarray)):
+                    array_symbols.append(sym)
+                expression = expression.subs(sym, getattr(self, str(sym)))
+            functions_in_expression = [
+                str(fn).split("(")[0] for fn in expression.atoms(smp.Function)
+            ]
+            # check if any of the functions are special julia defined functions
+            if np.any([fn in julia_funcs for fn in functions_in_expression]):
+                expression = str(expression)
+                # broadcast the function, allows for input of an array of t
+                for fn in julia_funcs:
+                    expression = expression.replace(fn, f"{fn}.")
+                for sym in array_symbols:
+                    expression = expression.replace(str(sym), f"Ref({getattr(self, str(sym))})")
+                # quick workaround to convert int to float for function inputs
+                # LOOK AT THIS LATER
+                expression = expression.replace(", 0,", ", 0.0,")
+                # evaluate the specified parameter expression in julia
+                Main.eval(f"_tmp_func(t) = {str(expression)}")
+                # can't get broadcasting to work if some variables are of array or list type, use map
+                Main.tmp_t = t
+                return Main.eval(f"map(_tmp_func, tmp_t)")
             else:
-                # break if none of the symbols in the expression are compound
-                # variables
-                break
+                # evaluate the specified parameter expression in python
+                func = lambdify(smp.Symbol("t"), expression, modules = ["numpy", "scipy"])
+                res = func(t)
+                if np.shape(res) == ():
+                    return np.ones(len(t))*res
+                else:
+                    return res
 
-        # substitute the numerical variables for the expressions
-        symbols_in_expression = [sym for sym in expression.free_symbols if sym is not smp.Symbol('t')]
-        array_symbols = []
-        for sym in symbols_in_expression:
-            # can't subs a symbol with a list, tuple or array
-            if isinstance(getattr(self, str(sym)), (list, tuple, np.ndarray)):
-                array_symbols.append(sym)
-            expression = expression.subs(sym, getattr(self, str(sym)))
-        functions_in_expression = [
-            str(fn).split("(")[0] for fn in expression.atoms(smp.Function)
-        ]
-        # check if any of the functions are special julia defined functions
-        if np.any([fn in julia_funcs for fn in functions_in_expression]):
-            expression = str(expression)
-            # broadcast the function, allows for input of an array of t
-            for fn in julia_funcs:
-                expression = expression.replace(fn, f"{fn}.")
-            for sym in array_symbols:
-                expression = expression.replace(str(sym), f"Ref({getattr(self, str(sym))})")
-            # quick workaround to convert int to float for function inputs
-            # LOOK AT THIS LATER
-            expression = expression.replace(", 0,", ", 0.0,")
-            # evaluate the specified parameter expression in julia
-            Main.eval(f"_tmp_func(t) = {str(expression)}")
-            # can't get broadcasting to work if some variables are of array or list type, use map
-            Main.tmp_t = t
-            return Main.eval(f"map(_tmp_func, tmp_t)")
-        else:
-            # evaluate the specified parameter expression in python
-            func = lambdify(smp.Symbol("t"), expression, modules = ["numpy", "scipy"])
-            res = func(t)
-            if np.shape(res) == ():
-                return np.ones(len(t))*res
-            else:
-                return res
-                
 
 
 
