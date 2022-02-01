@@ -17,6 +17,14 @@ __all__ = [
 ]
 
 def initialize_julia(nprocs):
+    """
+    Function to initialize Julia over nprocs processes.
+    Creates nprocs processes and loads the necessary Julia
+    packages.
+
+    Args:
+        nprocs (int): number of Julia processes to initialize.
+    """
     Main.eval("""
         using Logging: global_logger
         using TerminalLoggers: TerminalLogger
@@ -48,6 +56,19 @@ def initialize_julia(nprocs):
     print(f"Initialized Julia with {nprocs} processes")
 
 def generate_ode_fun_julia(preamble, code_lines):
+    """
+    Generate the ODE function from the preamble and code lines
+    generated in Python.
+
+    Args:
+        preamble (str): preamble of the ODE function initializing the 
+                        function variable definitions.
+        code_lines (list): list of strings, each line is a generated
+                            line of Julia code for part of the ODE.
+
+    Returns:
+        str : function definition of the ODE 
+    """
     ode_fun = preamble
     for cline in code_lines:
         ode_fun += "\t\t"+cline+'\n'
@@ -56,6 +77,17 @@ def generate_ode_fun_julia(preamble, code_lines):
     return ode_fun
 
 def setup_variables_julia(Γ, ρ, vars = None):
+    """
+    Convenience function for loading Γ, ρ and specified vars 
+    in Julia memory.
+
+    Args:
+        Γ (float): Γ of the simulated system
+        ρ (np.ndarray): complex density matrix of the simulated
+                        system
+        vars (dict): dict of variables (str key) to load in
+                    Julia memory
+    """
     Main.Γ = Γ
     Main.ρ = ρ
     Main.eval("""
@@ -358,16 +390,35 @@ class odeParameters:
 
 
 def setup_parameter_scan_1D(odePar, parameter, values):
+    """
+    Convenience function for setting up a 1D parameter scan.
+    Scan can be performed over multiple parameters simultaneously,
+    but only for the same value for each parameter. For different
+    values per parameter see setup_parameter_scan_zipped.
+
+    Args:
+        odePar (odeParameters): object containing all the parameters
+                                for the ODE system
+        parameters (str, list): parameter or list of parameters to
+                                scan over
+        values (list, np.ndarray): values to scan the parameter(s)
+                                    over.
+    """
+    # check if parameters is a list, get indices of the parameters
+    # as defined in odePar
     if isinstance(parameter, (list, tuple)):
         indices = [odePar.get_index_parameter(par) for par in parameter]
     else:
         indices = [odePar.get_index_parameter(parameter)]
 
+    # generate the parameter sequence for the prob_func function
     pars = list(odePar.p)
     for idx in indices:
         pars[idx] = "params[i]"
     pars = "[" + ",".join([str(p) for p in pars]) + "]"
     
+    # generate prob_func which remakes the ODE problem
+    # for each different parameter set
     Main.params = values
     Main.eval(f"""
     @everywhere params = $params
@@ -377,8 +428,21 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     """)
 
 def setup_parameter_scan_zipped(odePar, parameters, values):
-    pars = list(odePar.p)
+    """
+    Convenience function for initializing a 1D parameter scan over
+    multiple parameters, with each parameter scanning over a different
+    set of parameters.
 
+    Args:
+        odePar (odeParameters): object containing all the parameters
+                                for the OBE system.
+        parameters (list): list of parameters to scan over
+        values (list, np.ndarray): list/array of values to scan over.
+    """
+    # get the indices of each parameter that is scanned over, 
+    # as defined in odePars. If a parameter is not scanned over,
+    # use the variable definition
+    pars = list(odePar.p)
     for idN, parameter in enumerate(parameters):
         if isinstance(parameter, (list, tuple)):
             indices = [odePar.get_index_parameter(par) for par in parameter]
@@ -390,6 +454,8 @@ def setup_parameter_scan_zipped(odePar, parameters, values):
 
     pars = "[" + ",".join([str(p) for p in pars]) + "]"
 
+    # generate prob_func which remakes the ODE problem for
+    # each different parameter set
     Main.params = params    
     Main.eval(f"""
     @everywhere params = $params
@@ -399,6 +465,25 @@ def setup_parameter_scan_zipped(odePar, parameters, values):
     """)
 
 def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
+    """
+    Convenience function for generating an ND parameter scan.
+    For each parameter a list or np.ndarray of values is supplied,
+    and each possible combination between all parameters is simulated.
+
+    Args:
+        odePar (odeParameters): object containing all the parameters for
+                                the OBE system.
+        parameters (list, np.ndarray): strs of parameters to scan over.
+        values (list, np.ndarray): list or np.ndarray of values to scan over
+                                    for each parameter
+        randomize (bool, False): randomize the parameter scan if True,
+                                might increase performance when some parameter
+                                combinations are more computatationally
+                                expensive than others.
+    Returns:
+        np.ndarray: return the indices that randomized the parameter
+                    combinations, if randomize=True
+    """
     pars = str(odePar.p)[1:-1].split(',')
 
     for idN, parameter in enumerate(parameters):
@@ -409,12 +494,17 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
         for idx in indices:
             pars[idx] = f"params[i,{idN+1}]"
     pars = "[" + ",".join(pars) + "]"
+    # create all possible combinations between parameter values with
+    # meshgrid
     params = np.array(np.meshgrid(*values)).T.reshape(-1,len(values))
     Main.params = params
     if randomize:
+        # randomize value sequence if randomize=True
         ind_random = np.random.permutation(len(params))
         Main.params = params[ind_random]
 
+    # generate the prob_func that remakes the ODE problem for each
+    # new parameter value set
     Main.eval(f"""
     @everywhere params = $params
     @everywhere function prob_func(prob, i, repeat)
