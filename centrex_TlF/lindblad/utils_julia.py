@@ -17,6 +17,14 @@ __all__ = [
 ]
 
 def initialize_julia(nprocs):
+    """
+    Function to initialize Julia over nprocs processes.
+    Creates nprocs processes and loads the necessary Julia
+    packages.
+
+    Args:
+        nprocs (int): number of Julia processes to initialize.
+    """
     Main.eval("""
         using Logging: global_logger
         using TerminalLoggers: TerminalLogger
@@ -48,6 +56,19 @@ def initialize_julia(nprocs):
     print(f"Initialized Julia with {nprocs} processes")
 
 def generate_ode_fun_julia(preamble, code_lines):
+    """
+    Generate the ODE function from the preamble and code lines
+    generated in Python.
+
+    Args:
+        preamble (str): preamble of the ODE function initializing the 
+                        function variable definitions.
+        code_lines (list): list of strings, each line is a generated
+                            line of Julia code for part of the ODE.
+
+    Returns:
+        str : function definition of the ODE 
+    """
     ode_fun = preamble
     for cline in code_lines:
         ode_fun += "\t\t"+cline+'\n'
@@ -56,6 +77,17 @@ def generate_ode_fun_julia(preamble, code_lines):
     return ode_fun
 
 def setup_variables_julia(Γ, ρ, vars = None):
+    """
+    Convenience function for loading Γ, ρ and specified vars 
+    in Julia memory.
+
+    Args:
+        Γ (float): Γ of the simulated system
+        ρ (np.ndarray): complex density matrix of the simulated
+                        system
+        vars (dict): dict of variables (str key) to load in
+                    Julia memory
+    """
     Main.Γ = Γ
     Main.ρ = ρ
     Main.eval("""
@@ -276,14 +308,14 @@ class odeParameters:
         """Get the time evolution of parameters in odeParameters.
         Evaluates expressions in python if possible, otherwise calls julia to 
         evaluate the expressions
-        
+
         Args:
             t (np.ndarray[float]): array of timestamps
             parameter (str): parameter to evaluate over t
 
         Returns:
             np.ndarray : array with values of parameter corresponding to t
-            
+
         """
         # get a list of all parameters in odeParameters
         parameters = self._parameters + self._compound_vars
@@ -317,10 +349,14 @@ class odeParameters:
                     # break if none of the symbols in the expression are compound
                     # variables
                     break
-            
+
             # substitute the numerical variables for the expressions
             symbols_in_expression = [sym for sym in expression.free_symbols if sym is not smp.Symbol('t')]
+            array_symbols = []
             for sym in symbols_in_expression:
+                # can't subs a symbol with a list, tuple or array
+                if isinstance(getattr(self, str(sym)), (list, tuple, np.ndarray)):
+                    array_symbols.append(sym)
                 expression = expression.subs(sym, getattr(self, str(sym)))
             functions_in_expression = [
                 str(fn).split("(")[0] for fn in expression.atoms(smp.Function)
@@ -331,9 +367,16 @@ class odeParameters:
                 # broadcast the function, allows for input of an array of t
                 for fn in julia_funcs:
                     expression = expression.replace(fn, f"{fn}.")
+                for sym in array_symbols:
+                    expression = expression.replace(str(sym), f"Ref({getattr(self, str(sym))})")
+                # quick workaround to convert int to float for function inputs
+                # LOOK AT THIS LATER
+                expression = expression.replace(", 0,", ", 0.0,")
                 # evaluate the specified parameter expression in julia
                 Main.eval(f"_tmp_func(t) = {str(expression)}")
-                return Main._tmp_func(t)
+                # can't get broadcasting to work if some variables are of array or list type, use map
+                Main.tmp_t = t
+                return Main.eval(f"map(_tmp_func, tmp_t)")
             else:
                 # evaluate the specified parameter expression in python
                 func = lambdify(smp.Symbol("t"), expression, modules = ["numpy", "scipy"])
@@ -342,22 +385,40 @@ class odeParameters:
                     return np.ones(len(t))*res
                 else:
                     return res
-                    
+
 
 
 
 def setup_parameter_scan_1D(odePar, parameter, values):
+    """
+    Convenience function for setting up a 1D parameter scan.
+    Scan can be performed over multiple parameters simultaneously,
+    but only for the same value for each parameter. For different
+    values per parameter see setup_parameter_scan_zipped.
+
+    Args:
+        odePar (odeParameters): object containing all the parameters
+                                for the ODE system
+        parameters (str, list): parameter or list of parameters to
+                                scan over
+        values (list, np.ndarray): values to scan the parameter(s)
+                                    over.
+    """
+    # check if parameters is a list, get indices of the parameters
+    # as defined in odePar
     if isinstance(parameter, (list, tuple)):
         indices = [odePar.get_index_parameter(par) for par in parameter]
     else:
         indices = [odePar.get_index_parameter(parameter)]
 
-    pars = str(odePar.p)[1:-1].split(',')
+    # generate the parameter sequence for the prob_func function
+    pars = list(odePar.p)
     for idx in indices:
         pars[idx] = "params[i]"
+    pars = "[" + ",".join([str(p) for p in pars]) + "]"
     
-    pars = "[" + ",".join(pars) + "]"
-    
+    # generate prob_func which remakes the ODE problem
+    # for each different parameter set
     Main.params = values
     Main.eval(f"""
     @everywhere params = $params
@@ -367,8 +428,21 @@ def setup_parameter_scan_1D(odePar, parameter, values):
     """)
 
 def setup_parameter_scan_zipped(odePar, parameters, values):
-    pars = str(odePar.p)[1:-1].split(',')
+    """
+    Convenience function for initializing a 1D parameter scan over
+    multiple parameters, with each parameter scanning over a different
+    set of parameters.
 
+    Args:
+        odePar (odeParameters): object containing all the parameters
+                                for the OBE system.
+        parameters (list): list of parameters to scan over
+        values (list, np.ndarray): list/array of values to scan over.
+    """
+    # get the indices of each parameter that is scanned over, 
+    # as defined in odePars. If a parameter is not scanned over,
+    # use the variable definition
+    pars = list(odePar.p)
     for idN, parameter in enumerate(parameters):
         if isinstance(parameter, (list, tuple)):
             indices = [odePar.get_index_parameter(par) for par in parameter]
@@ -376,9 +450,12 @@ def setup_parameter_scan_zipped(odePar, parameters, values):
             indices = [odePar.get_index_parameter(parameter)]
         for idx in indices:
             pars[idx] = f"params[i,{idN+1}]"
-    pars = "[" + ",".join(pars) + "]"
     params = np.array(list(zip(*values)))
-    
+
+    pars = "[" + ",".join([str(p) for p in pars]) + "]"
+
+    # generate prob_func which remakes the ODE problem for
+    # each different parameter set
     Main.params = params    
     Main.eval(f"""
     @everywhere params = $params
@@ -388,6 +465,25 @@ def setup_parameter_scan_zipped(odePar, parameters, values):
     """)
 
 def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
+    """
+    Convenience function for generating an ND parameter scan.
+    For each parameter a list or np.ndarray of values is supplied,
+    and each possible combination between all parameters is simulated.
+
+    Args:
+        odePar (odeParameters): object containing all the parameters for
+                                the OBE system.
+        parameters (list, np.ndarray): strs of parameters to scan over.
+        values (list, np.ndarray): list or np.ndarray of values to scan over
+                                    for each parameter
+        randomize (bool, False): randomize the parameter scan if True,
+                                might increase performance when some parameter
+                                combinations are more computatationally
+                                expensive than others.
+    Returns:
+        np.ndarray: return the indices that randomized the parameter
+                    combinations, if randomize=True
+    """
     pars = str(odePar.p)[1:-1].split(',')
 
     for idN, parameter in enumerate(parameters):
@@ -398,12 +494,17 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize = False):
         for idx in indices:
             pars[idx] = f"params[i,{idN+1}]"
     pars = "[" + ",".join(pars) + "]"
+    # create all possible combinations between parameter values with
+    # meshgrid
     params = np.array(np.meshgrid(*values)).T.reshape(-1,len(values))
     Main.params = params
     if randomize:
+        # randomize value sequence if randomize=True
         ind_random = np.random.permutation(len(params))
         Main.params = params[ind_random]
 
+    # generate the prob_func that remakes the ODE problem for each
+    # new parameter value set
     Main.eval(f"""
     @everywhere params = $params
     @everywhere function prob_func(prob, i, repeat)
@@ -549,10 +650,14 @@ def setup_problem_parameter_scan(odepars: odeParameters, tspan: list,
                                 ρ: np.ndarray, parameters: list, 
                                 values: np.ndarray, dimensions: int = 1,
                                 problem_name = "prob", 
-                                output_func = None):
+                                output_func = None,
+                                zipped = False):
     setup_problem(odepars, tspan, ρ, problem_name)
     if dimensions == 1:
-        setup_parameter_scan_1D(odepars, parameters, values)
+        if zipped:
+            setup_parameter_scan_zipped(odepars, parameters, values)
+        else:
+            setup_parameter_scan_1D(odepars, parameters, values)
     else:
         setup_parameter_scan_ND(odepars, parameters, values)
     if output_func is not None:
@@ -571,20 +676,33 @@ def setup_problem_parameter_scan(odepars: odeParameters, tspan: list,
 
 def solve_problem(method = "Tsit5()", abstol = 1e-7, reltol = 1e-4, 
                 dt = 1e-8, callback = None, problem_name = "prob", 
-                progress = False):
+                progress = False, saveat = None, dtmin = None, maxiters = None):
+    if saveat is None:
+        saveat = "[]"
+    if dtmin is None:
+        dtmin = "nothing"
+        force_dtmin = 'false'
+    else:
+        force_dtmin = 'true'
+    if maxiters is None:
+        maxiters = 1e5
     if callback is not None:
         Main.eval(f"""
             sol = solve({problem_name}, {method}, abstol = {abstol}, 
                         reltol = {reltol}, dt = {dt}, 
                         progress = {str(progress).lower()}, 
-                        callback = {callback}    
+                        callback = {callback}, saveat = {saveat}, 
+                        dtmin = {dtmin}, maxiters = {maxiters}, 
+                        force_dtmin = {force_dtmin}
                     )
         """)
     else:
         Main.eval(f"""
             sol = solve({problem_name}, {method}, abstol = {abstol}, 
                         reltol = {reltol}, dt = {dt},
-                        progress = {str(progress).lower()}    
+                        progress = {str(progress).lower()}, saveat = {saveat},
+                        dtmin = {dtmin}, maxiters = {maxiters},
+                        force_dtmin = {force_dtmin}
                     )
         """)
 
@@ -612,7 +730,7 @@ def solve_problem_parameter_scan(
     else:
         Main.eval(f"""
             sol = solve({ensemble_problem_name}, {method}, {distributed_method}, 
-                        abstol = {abstol}, reltol = {reltol}, dt = {dt}
+                        abstol = {abstol}, reltol = {reltol}, dt = {dt},
                         trajectories = {trajectories},
                         save_everystep = {str(save_everystep).lower()},
                         saveat = {saveat}
@@ -641,7 +759,8 @@ def get_results():
     t = Main.eval("sol.t")
     return t, results
 
-def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
+def do_simulation_single(odepars, tspan, ρ, terminate_expression = None, 
+        dt = 1e-8, saveat = None, dtmin = None, maxiters = None):
     """Perform a single trajectory solve of the OBE equations for a specified 
     TlF system.
 
@@ -651,9 +770,14 @@ def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
         tspan (list, tuple): time range to solve for
         terminate_expression (str, optional): Expression that determines when to 
                                             stop integration. Defaults to None.
+        saveat (array or float, optional): save solution at timesteps given by 
+                                            saveat, either a list or every 
+                                            saveat
+        dtmin (float, optional): minimum dt allowed for adaptive timestepping
+        maxiters (float, optional): maximum number of steps allowed
 
     Returns:
-        tuple: tuple containing the timestamps and an n x m numpy arra, where
+        tuple: tuple containing the timestamps and an n x m numpy array, where
                 n is the number of states, and m the number of timesteps
     """
     callback_flag = False
@@ -662,9 +786,10 @@ def do_simulation_single(odepars, tspan, ρ, terminate_expression = None):
         callback_flag = True
     setup_problem(odepars, tspan, ρ)
     if callback_flag:
-        solve_problem(callback = "cb")
+        solve_problem(callback = "cb", saveat = saveat, dtmin = dtmin, dt = dt, 
+                        maxiters = maxiters)
     else:
-        solve_problem()
+        solve_problem(saveat = saveat, dtmin = dtmin, dt = dt, maxiters = maxiters)
     return get_results()
 
 def get_indices_diag_flattened(n):
