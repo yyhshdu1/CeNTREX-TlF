@@ -65,6 +65,8 @@ def generate_OBE_system(system_parameters, transitions,
                             used in the OBE system.
         qn_compact (QuantumSelector): dataclass specifying a subset of states to
                                         select based on the quantum numbers
+        decay_channels (DecayChannel): dataclass specifying the decay channel to
+                                        add
         verbose (bool, optional): Log progress to INFO. Defaults to False.
 
     Returns:
