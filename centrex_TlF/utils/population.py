@@ -1,3 +1,5 @@
+from numpy.core.numeric import indices
+from centrex_TlF.states.utils import QuantumSelector
 import numpy as np
 import scipy.constants as cst
 from centrex_TlF.couplings.utils_compact import (
@@ -6,7 +8,7 @@ from centrex_TlF.couplings.utils_compact import (
 
 __all__ = [
     'thermal_population', 'J_levels', 'J_slice', 'generate_thermal_J',
-    'generate_population_states'
+    'generate_population_states', 'generate_thermal_population_states'
 ]
 
 def thermal_population(J, T, B=6.66733e9, n = 100):
@@ -91,6 +93,64 @@ def generate_thermal_J(Js, n_excited, T, normalized = True,
         ρ = ρ_compact
 
     return ρ
+
+def generate_thermal_population_states(states_to_fill, states, T):
+    """Generate a thermal distrubtion over the states specified in 
+    states_to_fill, a QuantumSelector or list of Quantumselectors
+
+    Args:
+        states_to_fill (QuantumSelector): Quantumselector specifying states to 
+        fill
+        states (list, np.ndarray): all states used in simulation
+        T (float): temperature in Kelvin
+
+    Returns:
+        np.ndarray: density matrix with trace normalized to 1
+    """
+    # branch for single QuantumSelector use
+    if isinstance(states_to_fill, QuantumSelector):
+        # get all involved Js
+        Js = states_to_fill.J
+        # check if J was a list
+        if not isinstance(Js, (np.ndarray, list, tuple)):
+            Js = [Js]
+        # get indices of states to fill
+        indices_to_fill = states_to_fill.get_indices(states)
+    # branch for multiple QuantumSelectors use
+    elif isinstance(states_to_fill, (list, np.ndarray, tuple)):
+        # get all involved Js
+        Js = []
+        for stf in states_to_fill:
+            J = stf.J
+            # check if J was a list
+            if not isinstance(J, (np.ndarray, list, tuple)):
+                J = [J]
+            Js.extend(J)
+        # get indices of states to fill
+        indices_to_fill = []
+        for stf in states_to_fill:
+            indices_to_fill.extend(stf.get_indices(states))
+    
+    # remove duplicates from Js and indices_to_fill
+    Js = np.unique(Js)
+    indices_to_fill = np.unique(indices_to_fill)
+
+    # thermal population per hyperfine level for each involved J
+    thermal_populations = dict(
+                                [
+                                    (Ji, thermal_population(Ji, T)/J_levels(Ji)) 
+                                    for Ji in Js
+                                ]
+                            )
+    # generate an empty density matrix
+    ρ = np.zeros([len(states), len(states)], dtype = complex)
+    # fill the density matrix
+    for idρ in indices_to_fill:
+        state = states[idρ].find_largest_component()
+        thermal_pop = thermal_populations[state.J]
+        ρ[idρ, idρ] = thermal_pop
+    # normalize the trace to 1 and return the density matrix
+    return ρ/np.trace(ρ)
 
 def generate_population_states(states, levels):
     """generate a uniform population distribution with population in the 

@@ -6,14 +6,14 @@ __all__ = [
 ]
 
 def doppler_shift(velocity, frequency):
-    """calculate the doppler shift
+    """calculate the doppler shifted freuqency
 
     Args:
         velocity (float): velocity [m/s]
         frequency (float): frequency [Hz]
 
     Returns:
-        float: doppler shift in Hz
+        float: doppler shifted frequency in Hz
     """
     return frequency*(1+velocity/cst.c)
 
