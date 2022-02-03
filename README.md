@@ -256,9 +256,20 @@ obe_system = centrex.lindblad.setup_OBE_system_julia(
                   qn_compact=centrex.states.QuantumSelector(J=3, electronic = 'X')
                 )
 ```
-Note specifically `qn_compact`; for some simulations certain decays have to be included, but you might not care about which specific hyperfine sublevel the decays go to. `qn_compact` specifies which quantum numbers to combine into a single level (in this case `J=3`) in order to speed up the simulations. 
+Note specifically `qn_compact`; for some simulations certain decays have to be included, but you might not care about which specific hyperfine sublevel the decays go to. `qn_compact` specifies which quantum numbers to combine into a single level (in this case `J=3`) in order to speed up the simulations.
+Additionally other decay paths (such as vibrational decays, for instance) can be added with the optional keyword argument `decay_channels`, which expects a `DecayChannel` or list/array of `DecayChannel`. `DecayChannel` is a dataclass of format:
+```Python
+@dataclass
+class DecayChannel:
+    ground: CoupledBasisState
+    excited: np.ndarray
+    branching: float
+    description: str = ""
+```
+`ground`, a `CoupledBasisState`, indicates the decay path, `excited` specifies which excited states decay to `ground`.
+`branching` is the branching ration to the specified ground state, e.g. 0.04 for 4%. `description` is just an optional string to describe the decay channel.
 
-To run a single trajectory the integration time then has to be specified and initial density:
+To then run a single trajectory the integration time then has to be specified and initial density:
 ```Python
 tspan = [0,110e-6]
 ρ = centrex.utils.generate_population_states([0], len(obe_system.QN))
