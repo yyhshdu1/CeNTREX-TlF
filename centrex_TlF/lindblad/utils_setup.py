@@ -96,8 +96,11 @@ def generate_OBE_system(
     ) = generate_total_reduced_hamiltonian(
         ground_states_approx=generate_coupled_states_ground_X(system_parameters.ground),
         excited_states_approx=generate_coupled_states_excited_B(
-            system_parameters.B, Jmin=Jmin, Jmax=Jmax, rtol=rtol
+            system_parameters.excited
         ),
+        Jmin=Jmin,
+        Jmax=Jmax,
+        rtol=rtol,
     )
     if verbose:
         logger.info(
