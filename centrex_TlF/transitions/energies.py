@@ -1,26 +1,26 @@
 import json
-import scipy
 import pickle
-import numpy as np
-from tqdm import tqdm
+from functools import lru_cache
 from pathlib import Path
-from sympy import Rational
-from centrex_TlF.states.states import CoupledBasisState, State
-from centrex_TlF.states.utils import (
-    BasisStates_from_State,
-    find_state_idx_from_state,
-    find_states_idxs_from_states,
-    find_closest_vector_idx,
-)
+
+import numpy as np
+import scipy
 from centrex_TlF.hamiltonian import (
-    generate_uncoupled_hamiltonian_X,
-    generate_uncoupled_hamiltonian_X_function,
     generate_coupled_hamiltonian_B,
     generate_coupled_hamiltonian_B_function,
     generate_diagonalized_hamiltonian,
+    generate_uncoupled_hamiltonian_X,
+    generate_uncoupled_hamiltonian_X_function,
     matrix_to_states,
 )
-from functools import lru_cache
+from centrex_TlF.states.states import CoupledBasisState
+from centrex_TlF.states.utils import (
+    BasisStates_from_State,
+    find_closest_vector_idx,
+    find_state_idx_from_state,
+    find_states_idxs_from_states,
+)
+from sympy import Rational
 
 __all__ = [
     "calculate_energies",
@@ -104,10 +104,12 @@ def calculate_transition_frequency(state1, state2, H, QN):
     maximum overlap for state1 and state2 and calculate frequency between those.
 
     inputs:
-    state1      : State object or state vector (np.ndarray) representing the first state of interest
-    state2      : State object or state vector (np.ndarray) representing the second state of interest
+    state1      : State object or state vector (np.ndarray) representing the first state
+                    of interest
+    state2      : State object or state vector (np.ndarray) representing the second
+                    state of interest
     H           : Hamiltonian that is used to calculate the energies of states 1 and 2
-                  (assumed to be in angular frequency units - 2pi*Hz)
+                    (assumed to be in angular frequency units - 2pi*Hz)
     QN          : List of State objects that defines the basis for the Hamiltonian
 
     returns:
@@ -167,7 +169,6 @@ def generate_transition_frequency(state1, state2):
         frequency: transition frequency in 2π⋅Hz
     """
     path = Path(__file__).parent.parent / "pre_calculated"
-    js = path / "precalculated.json"
 
     # check if state1 and state2 are included in the pre-cached transitions
     _check_precached(state1)
@@ -181,7 +182,7 @@ def generate_transition_frequency(state1, state2):
 
 
 def generate_transition_frequencies(states1, states2):
-    """Get the field free transition frequencies between states1 and states2 in 
+    """Get the field free transition frequencies between states1 and states2 in
     2π⋅Hz.
     Grabs pre-cached version, otherwise throws exception.
 
@@ -193,7 +194,6 @@ def generate_transition_frequencies(states1, states2):
         frequency: transition frequency in 2π⋅Hz
     """
     path = Path(__file__).parent.parent / "pre_calculated"
-    js = path / "precalculated.json"
 
     # check if states1 and states2 are included in the pre-cached transitions
     for state1, state2 in zip(states1, states2):
@@ -264,34 +264,47 @@ def identify_transition(state1, state2):
 
 
 # class Transition:
-#     transitions_nom = {0: 'Q', +1: 'R', -1: 'P', +2: 'S', -2: 'O', +3: 'T'}
-#     transitions_ΔJ = {'R': +1, 'P': -1, 'Q': 0, 'S': +2, 'O': -2, 'T': +3}
+#     transitions_nom = {0: "Q", +1: "R", -1: "P", +2: "S", -2: "O", +3: "T"}
+#     transitions_ΔJ = {"R": +1, "P": -1, "Q": 0, "S": +2, "O": -2, "T": +3}
 
-#     def __init__(self, transition, F1, F, eg = 'X', ee = 'B'):
-#         Je,Jg = transition
+#     def __init__(self, transition, F1, F, eg="X", ee="B"):
+#         Je, Jg = transition
 #         self.transition = Je
 #         self.Jg = int(Jg)
-#         self.Je = self.Jg+self.transitions_ΔJ[Je]
+#         self.Je = self.Jg + self.transitions_ΔJ[Je]
 #         self.F1 = F1
 #         self.F = F
 
-
-#         self.ground_state = 1*CoupledBasisState(
-#                                 J=self.Jg, F1 = self.Jg+1/2, F = self.Jg, mF = 0,
-#                                 I1 = 1/2, I2 = 1/2, P = (-1)**self.Jg, Omega = 0,
-#                                 electronic_state = eg
-#                                 )
-#         self.excited_state = 1*CoupledBasisState(
-#                                 J=self.Je, F1 = F1, F = F, mF = 0, I1 = 1/2,
-#                                 I2 = 1/2, P = (-1)**(self.Jg+1), Omega = 1,
-#                                 electronic_state = ee
-#                                 )
+#         self.ground_state = 1 * CoupledBasisState(
+#             J=self.Jg,
+#             F1=self.Jg + 1 / 2,
+#             F=self.Jg,
+#             mF=0,
+#             I1=1 / 2,
+#             I2=1 / 2,
+#             P=(-1) ** self.Jg,
+#             Omega=0,
+#             electronic_state=eg,
+#         )
+#         self.excited_state = 1 * CoupledBasisState(
+#             J=self.Je,
+#             F1=F1,
+#             F=F,
+#             mF=0,
+#             I1=1 / 2,
+#             I2=1 / 2,
+#             P=(-1) ** (self.Jg + 1),
+#             Omega=1,
+#             electronic_state=ee,
+#         )
 #         self.frequency = generate_transition_frequency(
-#                             self.ground_state, self.excited_state
-#                         )
+#             self.ground_state, self.excited_state
+#         )
 
 #     def __repr__(self):
-#         string = \
-#             f"{self.transition}({self.Jg}) F1'={Rational(self.F1)}, F'={Rational(self.F)}"
+#         string = (
+#             f"{self.transition}({self.Jg}) F1'={Rational(self.F1)}, "
+#             f"F'={Rational(self.F)}"
+#         )
 #         # string += f' -> {self.frequency/(2*np.pi*1e9):.2f} GHz'
 #         return f"Transition({string})"

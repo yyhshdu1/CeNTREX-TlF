@@ -1,7 +1,4 @@
-import copy
 import numpy as np
-
-from centrex_TlF.couplings.collapse import collapse_matrices
 
 __all__ = [""]
 

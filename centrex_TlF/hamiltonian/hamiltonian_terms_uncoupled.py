@@ -1,33 +1,31 @@
-import numpy as np
-import centrex_TlF.states as states
-import centrex_TlF.constants.constants_X as cst_X
 import centrex_TlF.constants.constants_B as cst_B
-from centrex_TlF.hamiltonian.utils import threej_f, sixj_f
-from centrex_TlF.states.states import State, UncoupledBasisState
+import centrex_TlF.constants.constants_X as cst_X
+import centrex_TlF.states as states
+import numpy as np
 from centrex_TlF.hamiltonian.quantum_operators import (
-    com,
     J2,
-    I1z,
-    I1p,
-    Jz,
-    Jm,
     I1m,
-    Jp,
+    I1p,
+    I1x,
+    I1y,
+    I1z,
     I2m,
     I2p,
-    I1x,
     I2x,
     I2y,
-    I1y,
-    Jy,
-    Jx,
     I2z,
-    J4,
-    J6,
+    Jm,
+    Jp,
+    Jx,
+    Jy,
+    Jz,
+    com,
 )
+from centrex_TlF.hamiltonian.utils import threej_f
+from centrex_TlF.states.states import State, UncoupledBasisState
 
 ########################################################
-### Rotational Term
+# Rotational Term
 ########################################################
 
 
@@ -36,7 +34,7 @@ def Hrot_X(psi):
 
 
 ########################################################
-### Terms with angular momentum dot products
+# Terms with angular momentum dot products
 ########################################################
 
 
@@ -78,7 +76,7 @@ def Hc3(psi):
 
 
 ########################################################
-### Field free X state Hamiltonian
+# Field free X state Hamiltonian
 ########################################################
 
 
@@ -89,7 +87,7 @@ def Hff_X(psi):
 
 
 ########################################################
-### Λ doubling term
+# Λ doubling term
 ########################################################
 
 
@@ -118,8 +116,8 @@ def H_LD(psi):
 
 
 ########################################################
-### C'(Tl) - term (Brown 1978 "A determination of fundamental Zeeman parameters
-### for the OH radical", eqn A12)
+# C'(Tl) - term (Brown 1978 "A determination of fundamental Zeeman parameters
+# for the OH radical", eqn A12)
 ########################################################
 
 
@@ -147,7 +145,8 @@ def H_c1p(psi):
     # Initialize container for storing states and matrix elements
     data = []
 
-    # Loop over the possible values of quantum numbers for which the matrix element can be non-zero
+    # Loop over the possible values of quantum numbers for which the matrix element can
+    # be non-zero
     # Need Jprime = J+1 ... |J-1|
     for Jprime in range(np.abs(J - 1), J + 2):
         # Loop over possible values of mJprime and m1prime
@@ -214,7 +213,7 @@ def H_c1p(psi):
 
 
 ########################################################
-### Electron magnetic hyperfine operator
+# Electron magnetic hyperfine operator
 ########################################################
 
 
@@ -236,7 +235,8 @@ def H_mhf_Tl(psi):
     # Initialize container for storing states and matrix elements
     data = []
 
-    # Loop over the possible values of quantum numbers for which the matrix element can be non-zero
+    # Loop over the possible values of quantum numbers for which the matrix element can
+    # be non-zero
     # Need Jprime = J+1 ... |J-1|
     for Jprime in np.arange(np.abs(J - 1), J + 2):
         # Evaluate the part of the matrix element that is common for all p
@@ -291,7 +291,8 @@ def H_mhf_F(psi):
     # Initialize container for storing states and matrix elements
     data = []
 
-    # Loop over the possible values of quantum numbers for which the matrix element can be non-zero
+    # Loop over the possible values of quantum numbers for which the matrix element can
+    # be non-zero
     # Need Jprime = J+1 ... |J-1|
     for Jprime in np.arange(np.abs(J - 1), J + 2):
         # Evaluate the part of the matrix element that is common for all p
@@ -329,14 +330,14 @@ def H_mhf_F(psi):
 
 
 ########################################################
-### Field free B state Hamiltonian
+# Field free B state Hamiltonian
 ########################################################
 
 # def Hff_B(psi):
 #     return Hrot_B(psi) + H_mhf_Tl(psi) + H_mhf_F(psi) + H_c1p(psi) + H_LD(psi)
 
 ########################################################
-### Zeeman X state
+# Zeeman X state
 ########################################################
 
 
@@ -368,7 +369,7 @@ def HZz_X(psi, μ_J=cst_X.μ_J, μ_Tl=cst_X.μ_Tl, μ_F=cst_X.μ_F):
 
 
 ########################################################
-### Zeeman B state Hamiltonian
+# Zeeman B state Hamiltonian
 ########################################################
 
 
@@ -441,7 +442,7 @@ def HZz_B(psi):
 
 
 ########################################################
-### Stark Hamiltonian
+# Stark Hamiltonian
 ########################################################
 
 

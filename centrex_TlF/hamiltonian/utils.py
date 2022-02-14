@@ -1,6 +1,6 @@
-import numpy as np
-import scipy.linalg
 from functools import lru_cache
+
+import numpy as np
 from centrex_TlF.states.states import State
 from sympy.physics.wigner import wigner_3j, wigner_6j
 
@@ -88,7 +88,7 @@ def matrix_to_states(V, QN, E=None):
     Args:
         V (np.ndarray): array with columns corresponding to eigenvectors
         QN (list): list of State objects
-        E (list, optional): list of energies corresponding to the states. 
+        E (list, optional): list of energies corresponding to the states.
                             Defaults to None.
 
     Returns:

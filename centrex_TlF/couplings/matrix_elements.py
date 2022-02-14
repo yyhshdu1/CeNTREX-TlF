@@ -1,11 +1,9 @@
-import sqlite3
 import numpy as np
-from pathlib import Path
-from centrex_TlF.hamiltonian.utils import threej_f, sixj_f
 from centrex_TlF.couplings.utils_sqlite import (
     retrieve_ED_ME_coupled_sqlite_single,
     retrieve_ED_ME_coupled_sqlite_single_rme,
 )
+from centrex_TlF.hamiltonian.utils import sixj_f, threej_f
 
 
 def calculate_ED_ME_mixed_state(
@@ -16,10 +14,10 @@ def calculate_ED_ME_mixed_state(
     Args:
         bra (State): state object
         ket (State): state object
-        pol_vec (np.ndarray, optional): polarization vector. 
+        pol_vec (np.ndarray, optional): polarization vector.
                                         Defaults to np.array([1,1,1]).
         reduced (bool, optional): [description]. Defaults to False.
-        normalize_pol (bool, optional): normalize the polarization vector to 1, 
+        normalize_pol (bool, optional): normalize the polarization vector to 1,
                                         defaults to True.
 
     Returns:
@@ -51,10 +49,10 @@ def generate_ED_ME_mixed_state(
     Args:
         bra (State): state object
         ket (State): state object
-        pol_vec (np.ndarray, optional): polarization vector. 
+        pol_vec (np.ndarray, optional): polarization vector.
                                         Defaults to np.array([1,1,1]).
         reduced (bool, optional): [description]. Defaults to False.
-        normalize_pol (bool, optional): normalize the polarization vector to 1, 
+        normalize_pol (bool, optional): normalize the polarization vector to 1,
                                         defaults to True.
 
     Returns:
@@ -90,10 +88,10 @@ def ED_ME_coupled(bra, ket, pol_vec=np.array([1, 1, 1]), rme_only=False):
     Args:
         bra (CoupledBasisState): coupled basis state object
         ket (CoupledBasisState): coupled basis state object
-        pol_vec (np.ndarray, optional): polarization vector. 
+        pol_vec (np.ndarray, optional): polarization vector.
                                         Defaults to np.array([1,1,1]).
-        rme_only (bool, optional): set True to return only reduced matrix 
-                                    element, otherwise angular component is 
+        rme_only (bool, optional): set True to return only reduced matrix
+                                    element, otherwise angular component is
                                     included. Defaults to False.
 
     Returns:
@@ -114,8 +112,6 @@ def ED_ME_coupled(bra, ket, pol_vec=np.array([1, 1, 1]), rme_only=False):
     mFp = ket.mF
     Jp = ket.J
     F1p = ket.F1
-    I1p = ket.I1
-    I2p = ket.I2
     Omegap = ket.Omega
 
     # calculate the reduced matrix element

@@ -1,15 +1,14 @@
 import copy
 import logging
+
 from centrex_TlF.couplings.utils import TransitionSelector
-import numpy as np
-from sympy import zeros, Symbol, eye
-from centrex_TlF.couplings import generate_total_hamiltonian
-from centrex_TlF.states.utils import get_indices_quantumnumbers, QuantumSelector
-from centrex_TlF.states.utils_compact import compact_QN_coupled_indices
 from centrex_TlF.lindblad.utils_compact import (
     compact_symbolic_hamiltonian_indices,
     delete_row_column_symbolic,
 )
+from centrex_TlF.states.utils import QuantumSelector, get_indices_quantumnumbers
+from centrex_TlF.states.utils_compact import compact_QN_coupled_indices
+from sympy import Symbol, eye, zeros
 
 __all__ = [
     "generate_symbolic_hamiltonian",
@@ -80,7 +79,6 @@ def generate_symbolic_hamiltonian(QN, H_rot, couplings, Ωs=None, δs=None, pols
                     break
             δs[idc] = δ
         indices_ground = [QN.index(s) for s in coupling["ground states"]]
-        indices_excited = [QN.index(s) for s in coupling["excited states"]]
         idg = QN.index(coupling["ground main"])
         ide = QN.index(coupling["excited main"])
         # subtract excited state energy over diagonal for first entry:
@@ -108,11 +106,11 @@ def generate_symbolic_detunings(n_states, detunings):
 
     if len(detunings) == 1:
         for idd, indices in enumerate(detunings):
-            Δ = Symbol(f"Δ", real=True)
+            Δ = Symbol("Δ", real=True)
             for idx in indices:
                 detuning[idx, idx] += Δ
 
-        symbols = [Symbol(f"Δ", complex=True)]
+        symbols = [Symbol("Δ", complex=True)]
     else:
         for idd, indices in enumerate(detunings):
             Δ = Symbol(f"Δ{idd+1}", real=True)
@@ -146,7 +144,8 @@ def generate_total_symbolic_hamiltonian(
         )
     else:
         raise AssertionError(
-            "transitions required to be a list of TransitionSelectors or a list of dicts"
+            "transitions required to be a list of TransitionSelectors"
+            " or a list of dicts"
         )
 
 
@@ -159,24 +158,24 @@ def generate_total_symbolic_hamiltonian_transitiondict(
         QN (list): states
         H_int (array): internal hamiltonian
         couplings (list): list of dictionaries with all couplings of the system
-        transitions (list): list of dictionaries with all transitions of the 
+        transitions (list): list of dictionaries with all transitions of the
                             system
-        slice_compact (slice operator, optional): numpy slice operator for which 
-                                                    part of the system to compact 
-                                                    to a single state. 
+        slice_compact (slice operator, optional): numpy slice operator for which
+                                                    part of the system to compact
+                                                    to a single state.
                                                     Defaults to None.
         qn_compact (list, optional): list of QuantumSelectors or lists of
-                                    QuantumSelectors with each 
-                                    QuantumSelector containing the quantum 
-                                    numbers to compact into a single state. 
+                                    QuantumSelectors with each
+                                    QuantumSelector containing the quantum
+                                    numbers to compact into a single state.
                                     Defaults to None.
 
     Returns:
         sympy matrix: symbolic hamiltonian
-        if qn_compact is provided, also returns the states corresponding to the 
+        if qn_compact is provided, also returns the states corresponding to the
         compacted hamiltonian, i.e. ham, QN_compact
     """
-    H_rot = generate_total_hamiltonian(H_int, QN, couplings)
+    # H_rot = generate_total_hamiltonian(H_int, QN, couplings)
     Ωs = [t.get("Ω symbol") for t in transitions]
     Δs = [t.get("Δ symbol") for t in transitions]
     pols = []
@@ -214,24 +213,24 @@ def generate_total_symbolic_hamiltonian_TransitionSelector(
         QN (list): states
         H_int (array): internal hamiltonian
         couplings (list): list of dictionaries with all couplings of the system
-        transitions (list): list of dictionaries with all transitions of the 
+        transitions (list): list of dictionaries with all transitions of the
                             system
-        slice_compact (slice operator, optional): numpy slice operator for which 
-                                                    part of the system to compact 
-                                                    to a single state. 
+        slice_compact (slice operator, optional): numpy slice operator for which
+                                                    part of the system to compact
+                                                    to a single state.
                                                     Defaults to None.
         qn_compact (list, optional): list of QuantumSelectors or lists of
-                                    QuantumSelectors with each 
-                                    QuantumSelector containing the quantum 
-                                    numbers to compact into a single state. 
+                                    QuantumSelectors with each
+                                    QuantumSelector containing the quantum
+                                    numbers to compact into a single state.
                                     Defaults to None.
 
     Returns:
         sympy matrix: symbolic hamiltonian
-        if qn_compact is provided, also returns the states corresponding to the 
+        if qn_compact is provided, also returns the states corresponding to the
         compacted hamiltonian, i.e. ham, QN_compact
     """
-    H_rot = generate_total_hamiltonian(H_int, QN, couplings)
+    # H_rot = generate_total_hamiltonian(H_int, QN, couplings)
     Ωs = [t.Ω for t in transitions]
     Δs = [t.δ for t in transitions]
     pols = []

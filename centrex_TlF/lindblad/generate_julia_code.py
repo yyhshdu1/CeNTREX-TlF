@@ -1,10 +1,11 @@
 import multiprocessing
 from collections import OrderedDict
+
 from centrex_TlF.lindblad.utils import generate_density_matrix_symbolic
+from centrex_TlF.lindblad.utils_julia import odeParameters
 from centrex_TlF.lindblad.utils_multiprocessing import (
     multi_system_of_equations_to_lines,
 )
-from centrex_TlF.lindblad.utils_julia import odeParameters
 
 __all__ = ["system_of_equations_to_lines", "generate_preamble"]
 
@@ -23,7 +24,8 @@ def generate_preamble(odepars: odeParameters, transitions: list) -> str:
     for transition in transitions:
         preamble += f"\t\t{transition.Ω}ᶜ = conj({transition.Ω})\n"
 
-    # remove duplicate lines (if multiple transitions have the same Rabi rate symbol or detuning
+    # remove duplicate lines (if multiple transitions have the same Rabi rate symbol or
+    # detuning
     preamble = "\n".join(list(OrderedDict.fromkeys(preamble.split("\n"))))
 
     # for a list of lists type inference doesn't work, setting types explicitly
