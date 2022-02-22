@@ -1,22 +1,25 @@
 import copy
+
 import numpy as np
-from tqdm import tqdm
 from centrex_TlF.couplings.branching import calculate_BR
-from centrex_TlF.couplings.utils_compact import (
-    compact_C_array, compact_C_array_indices
-)
-from centrex_TlF.states.utils import (
-    get_indices_quantumnumbers,
-    QuantumSelector
-)
-from centrex_TlF.states.utils_compact import (
-    compact_QN_coupled_indices
-)
-__all__ = [
-    'collapse_matrices'
-]
-def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
-                        progress = False, slice_compact = None, qn_compact = None):
+from centrex_TlF.couplings.utils_compact import compact_C_array, compact_C_array_indices
+from centrex_TlF.states.utils import QuantumSelector, get_indices_quantumnumbers
+from centrex_TlF.states.utils_compact import compact_QN_coupled_indices
+from tqdm import tqdm
+
+__all__ = ["collapse_matrices"]
+
+
+def collapse_matrices(
+    QN,
+    ground_states,
+    excited_states,
+    gamma=1,
+    tol=1e-4,
+    progress=False,
+    slice_compact=None,
+    qn_compact=None,
+):
     """
     Function that generates the collapse matrix for given ground and excited states
 
@@ -28,18 +31,18 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
     tol = couplings smaller than tol/sqrt(gamma) are set to zero to speed up computation
     progress = boolean flag to display a tqdm progress bar
     slice_compact = np._s of indices to compact into one state
-    qn_compact = list of QuantumSelectors or lists of QuantumSelectors with each 
-                QuantumSelector containing the quantum numbers to compact into a 
+    qn_compact = list of QuantumSelectors or lists of QuantumSelectors with each
+                QuantumSelector containing the quantum numbers to compact into a
                 single state. Defaults to None.
 
     outputs:
     C_list = array of collapse matrices
     """
-    #Initialize list of collapse matrices
+    # Initialize list of collapse matrices
     C_list = []
 
-    #Start looping over ground and excited states
-    for excited_state in tqdm(excited_states, disable = not progress):
+    # Start looping over ground and excited states
+    for excited_state in tqdm(excited_states, disable=not progress):
         j = QN.index(excited_state)
         BRs = calculate_BR(excited_state, ground_states)
         if np.sum(BRs) > 1:
@@ -48,9 +51,9 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
             i = QN.index(ground_state)
 
             if np.sqrt(BR) > tol:
-                #Initialize the coupling matrix
-                H = np.zeros((len(QN),len(QN)), dtype = complex)
-                H[i,j] = np.sqrt(BR*gamma)
+                # Initialize the coupling matrix
+                H = np.zeros((len(QN), len(QN)), dtype=complex)
+                H[i, j] = np.sqrt(BR * gamma)
 
                 C_list.append(H)
 
@@ -61,7 +64,7 @@ def collapse_matrices(QN, ground_states, excited_states, gamma = 1, tol = 1e-4,
     elif qn_compact:
         if isinstance(qn_compact, QuantumSelector):
             qn_compact = [qn_compact]
-        QN_compact = copy.deepcopy(QN)        
+        QN_compact = copy.deepcopy(QN)
         for qnc in qn_compact:
             indices_compact = get_indices_quantumnumbers(qnc, QN_compact)
             QN_compact = compact_QN_coupled_indices(QN_compact, indices_compact)
