@@ -1,8 +1,6 @@
 import numpy as np
 
-__all__ = [
-    ''
-]
+__all__ = [""]
 
 
 def compact_QN_coupled_indices(QN, indices_compact):
@@ -17,7 +15,8 @@ def compact_QN_coupled_indices(QN, indices_compact):
     """
     QNc = [QN[idx] for idx in indices_compact]
 
-    slc = lambda s: s.find_largest_component()
+    def slc(s):
+        return s.find_largest_component()
 
     Js = np.unique([slc(s).J for s in QNc if slc(s).J is not None])
     F1s = np.unique([slc(s).F1 for s in QNc if slc(s).F1 is not None])
@@ -40,6 +39,6 @@ def compact_QN_coupled_indices(QN, indices_compact):
         state_rep.P = None
 
     # make it a state again instead of uncoupled basisstate
-    QNcompact[indices_compact[0]] = (1.0 + 0j) * state_rep    
+    QNcompact[indices_compact[0]] = (1.0 + 0j) * state_rep
 
     return QNcompact
