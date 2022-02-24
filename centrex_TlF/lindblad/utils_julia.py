@@ -595,9 +595,19 @@ def setup_parameter_scan_ND(odePar, parameters, values, randomize=False):
         return ind_random
 
 
-def setup_ratio_calculation(states, output_func=None):
-    if output_func is None:
-        output_func = "output_func"
+def setup_ratio_calculation(states, output_func="output_func"):
+    """Create an output function for the DifferentialEquations.jl solver that takes the
+    ratio of the integral end result over the first value. Usefull for calculating gains
+    or losses of certain states/ensembles.
+
+    Args:
+        states (list): list or list of list of states to take the ratio over.
+        output_func (str, optional): Name of the output function. Defaults to
+                                    "output_func".
+
+    Returns:
+        (str): Name of the output function.
+    """
     cmd = ""
     if isinstance(states[0], (list, np.ndarray, tuple)):
         for state in states:
@@ -636,6 +646,12 @@ def handle_randomized_ensemble_solution(ind_random, sol_name="sim"):
 
 
 def setup_initial_condition_scan(values):
+    """Setup an initial condition scan. E.g. for optical bloch simulations changing the
+    initial density matrix.
+
+    Args:
+        values (np.ndarray, list): list or array of initial values for the ODE solver.
+    """
     Main.params = values
     Main.eval("@everywhere params = $params")
     Main.eval(
@@ -721,6 +737,13 @@ def setup_state_integral_map(
 def setup_discrete_callback_terminate(
     odepars: odeParameters, stop_expression: str, callback_name=None
 ):
+    """Setup a discrete callback termination function.
+    E.g. use for terminating a trajectory simulation once the multipass has been
+    traversed.
+
+    Args:
+        odepars (odeParameters)
+    """
     # parse expression string to sympy equation
     expression = smp.parsing.sympy_parser.parse_expr(stop_expression)
     # extract symbols in expression and convert to a list of strings
@@ -752,6 +775,15 @@ def setup_discrete_callback_terminate(
 def setup_problem(
     odepars: odeParameters, tspan: list, ρ: np.ndarray, problem_name="prob"
 ):
+    """ Setup an OBE problem in Julia.
+
+    Args:
+        odepars (odeParameters): odeParameters object which contains all the free
+                                parameters used in the OBEs
+        tspan (list, tuple): start and stop time for integrating the ODE
+        ρ (np.ndarray): initial density matrix
+        problem_name (str, optional): name for problem function
+    """
     odepars.generate_p_julia()
     Main.ρ = ρ
     Main.tspan = tspan
@@ -776,6 +808,28 @@ def setup_problem_parameter_scan(
     output_func=None,
     zipped=False,
 ):
+    """Setting up a parameter scan problem for the optical bloch equations (OBEs)
+
+    Args:
+        odepars (odeParameters): odeParameters object which contains all the free
+                                parameters used in the OBEs.
+        tspan (list, np.ndarray, tuple): time range to integrate the OBEs
+        ρ (np.ndarray): density matrix
+        parameters (list): list of parameters to scan over, parameters as strings.
+        values (list, np.ndarray): list or array of values corresponding to the list of
+                                    parameters.
+        dimensions (int): dimension of scan to perform
+        problem_name (str): name of the resulting parameter scan problem
+        output_func (str): name of an output function to apply to every OBE integration
+                            result.
+        zipped (bool, optional): Iterate through all possible combinations if False,
+                                iterate through parameter values simultanously if True.
+                                Defaults to False.
+
+    Returns:
+        (str): ensemble problem name
+
+    """
     setup_problem(odepars, tspan, ρ, problem_name)
     if dimensions == 1:
         if zipped:
@@ -815,6 +869,29 @@ def solve_problem(
     dtmin=None,
     maxiters=None,
 ):
+    """ Solve ode problem in Julia.
+
+    Args:
+        method (str, optional): ODE solver method, see DifferentialEquations.jl methods.
+                                Defaults to "Tsit5()"
+        abstol (float, optional): absolute tolerance of solver. Defaults to 1e-7.
+        reltol (float, optional): relative tolerance of solver. Defaults to 1e-4.
+        dt (float, optional): initial timestep of solver. Defaults to 1e-8.
+        callback (str, optional): callback function to check for every solver step. E.g.
+                                for stopping integration under certain conditions.
+                                Defaults to None.
+        problem_name (str, optional): Name of problem function to solve. Defaults to
+                                        "prob".
+        progress (bool, optional): Show a progress bar in the terminal. Defaults to
+                                    True.
+        saveat (float, optional): save solution at every integer multiple of saveat.
+                                    Defaults to None, saves at every solver step.
+        dtmin (float, optional): Minimum solver timestep. Defaults to None, i.e. using
+                                    the DifferentialEquations.jl default.
+        maxiters (int, optional): Maximum iterations for solver. Defaults to None,
+                                    i.e. using the DifferentialEquations.jl default.
+
+    """
     if saveat is None:
         saveat = "[]"
     if dtmin is None:
@@ -861,6 +938,25 @@ def solve_problem_parameter_scan(
     trajectories=None,
     saveat=None,
 ):
+    """ Solve a parameter scan problem.
+
+    Args:
+        method (str): ODE solver method, see DifferentialEquations.jl methods
+        distributed_method (str): Ensemble solver method
+        abstol (float): absolute tolerance of solver
+        reltol (float): relative tolerance of solver
+        dt (float): initial stepsize
+        save_everystep (bool, optional): save every solver step. Defaults to True.
+        callback (str, optional): callback function to check for every solver step. E.g.
+                                for stopping integration under certain conditions.
+        ensemble_problem_name (optional): name of the ensemble problem to solve.
+                                        Defaults to "ens_prob"
+        trajectories (int, optional): number of trajectories to solve. Defaults to the
+                                        size of the parameter scan.
+        saveat (float, optional): timepoints at which to save ODE solutions. Defaults to
+                                    every solver step.
+
+    """
     if trajectories is None:
         trajectories = "size(params)[1]"
     if saveat is None:
@@ -890,6 +986,14 @@ def solve_problem_parameter_scan(
 
 
 def get_results_parameter_scan(scan_values=None):
+    """Retrieve the results of a parameter scan from the Julia environment
+
+    Args:
+        scan_values (np.ndarray/list, optional): Array with scan values. Defaults to None.
+
+    Returns:
+        np.ndarray: result of parameter scan simulations
+    """
     results = np.array(Main.eval("sol.u"))
     if scan_values is not None:
         if isinstance(scan_values, list) or (scan_values.ndim > 1):
@@ -905,7 +1009,7 @@ def get_results():
     """Retrieve the results of a single trajectory OBE simulation solution.
 
     Returns:
-        tuple: tuple containing the timestamps and an n x m numpy arra, where
+        tuple: tuple containing the timestamps and an n x m numpy array, where
                 n is the number of states, and m the number of timesteps
     """
     results = np.real(np.einsum("jji->ji", np.array(Main.eval("sol[:]")).T))

@@ -25,14 +25,20 @@ from centrex_TlF.lindblad.utils_decay import (
     add_levels_symbolic_hamiltonian,
     add_states_QN,
 )
-from centrex_TlF.lindblad.utils_julia import generate_ode_fun_julia, initialize_julia
+from centrex_TlF.lindblad.utils_julia import (
+    generate_ode_fun_julia,
+    initialize_julia,
+    odeParameters,
+)
 from centrex_TlF.states.generate_states import (
     generate_coupled_states_excited_B,
     generate_coupled_states_ground_X,
 )
 from julia import Main
 
-__all__ = ["generate_OBE_system", "setup_OBE_system_julia"]
+from centrex_TlF.states.utils import SystemParameters
+
+__all__ = ["generate_OBE_system", "setup_OBE_system_julia", "load_OBESystem_julia"]
 
 
 @dataclass
@@ -51,6 +57,45 @@ class OBESystem:
     preamble: str = ""
     QN_original: np.ndarray = None
     decay_channels: np.ndarray = None
+
+
+def load_OBESystem_julia(
+    obe_system: OBESystem,
+    ode_parameters: odeParameters,
+    system_parameters: SystemParameters,
+    verbose: bool = False,
+):
+    """Load an OBESystem into Julia that was stored or not loaded into Julia.
+
+    Args:
+        obe_system (OBESystem): OBESystem object which contains all data to reconstruct
+
+        ode_parameters (odeParameters): dataclass containing the ode parameters.
+                                        E.g. Ω, δ, vz, ..., etc.
+        system_parameters (SystemParameters): dataclass holding system parameters.
+                                            E.g. number of processes to use, Γ, states
+                                            in system.
+        verbose (bool, optional): Log status.
+    """
+
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        logger.info(
+            "load_OBESystem_julia: 1/2 -> Initializing Julia on "
+            f"{system_parameters.nprocs} cores"
+        )
+    initialize_julia(nprocs=system_parameters.nprocs)
+    if verbose:
+        logger.info(
+            "load_OBESystem_julia: 2/2 -> Defining the ODE equation and parameters in"
+            " Julia"
+        )
+    logging.basicConfig(level=logging.WARNING)
+    generate_ode_fun_julia(obe_system.preamble, obe_system.code_lines)
+    Main.eval(f"@everywhere Γ = {system_parameters.Γ}")
+    ode_parameters.generate_p_julia()
 
 
 def generate_OBE_system(
