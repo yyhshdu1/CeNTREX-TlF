@@ -180,6 +180,13 @@ class QuantumSelector:
     def get_indices(self, QN, mode="python"):
         return get_indices_quantumnumbers_base(self, QN, mode)
 
+    def get_states(self, QN, mode="python"):
+        """
+        Returns the states in QN that fit the pattern specified in the QuantumSelector
+        """
+        indices = self.get_indices(QN)
+        return QN[indices]
+
 
 @dataclass
 class SystemParameters:
