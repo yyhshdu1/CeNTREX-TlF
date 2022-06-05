@@ -1,5 +1,4 @@
-# Constants in MHz
-
+# Constants in Hz
 B_rot_B = 6687.879e6
 D_rot_B = 0.010869e6
 H_const_B = -8.1e-2
@@ -11,3 +10,4 @@ c1p_Tl = 11.17e6
 μ_B = 100
 gL = 1
 gS = 2
+mu_e = 1.14e6 #Hz/(V/cm)
