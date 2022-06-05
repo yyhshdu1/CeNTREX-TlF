@@ -1,5 +1,6 @@
 *saved_data
-
+/.vscode/settings.json
+/.vscode
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -114,3 +115,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.vscode/settings.json
