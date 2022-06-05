@@ -5,16 +5,11 @@ import scipy
 import scipy.linalg
 from centrex_TlF.hamiltonian.basis_transform import generate_transform_matrix
 from centrex_TlF.hamiltonian.generate_hamiltonian import (
-    generate_coupled_hamiltonian_B,
-    generate_uncoupled_hamiltonian_X,
-)
+    generate_coupled_hamiltonian_B, generate_uncoupled_hamiltonian_X)
 from centrex_TlF.hamiltonian.utils import (
     generate_coupled_hamiltonian_B_function,
-    generate_uncoupled_hamiltonian_X_function,
-    matrix_to_states,
-    reduced_basis_hamiltonian,
-    reorder_evecs,
-)
+    generate_uncoupled_hamiltonian_X_function, matrix_to_states,
+    reduced_basis_hamiltonian, reorder_evecs)
 
 __all__ = [
     "generate_reduced_X_hamiltonian",
@@ -49,6 +44,9 @@ def generate_reduced_X_hamiltonian(
     ground_states_approx, E=np.array([0, 0, 0]), B=np.array([0, 0, 0.001]), rtol=None
 ):
 
+    # TODO: Code below doesn't work if ground_states_approx contains only
+    # only subset of states in given J since in that case 
+    # len(QN) > len(ground_states_approx)
     QN = states.generate_uncoupled_states_ground(
         np.unique([gs.J for gs in ground_states_approx])
     )

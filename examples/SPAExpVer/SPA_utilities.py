@@ -18,7 +18,7 @@ def run_traj_ensemble_simulation(df_traj: pd.DataFrame, odepars, obe_system, exc
     """
 
     # Make dataframe that contains trajectory and laser detuning values
-    df_traj_ens = df_traj.sample(n = n_traj).merge(pd.Series(laser_detunings, name = "laser_detuning").to_frame(), how = 'cross')
+    df_traj_ens = df_traj.sample(n = n_traj).reset_index().merge(pd.Series(laser_detunings, name = "laser_detuning").to_frame(), how = 'cross')
     df_traj_ens['detuning'] = df_traj_ens.doppler + df_traj_ens.laser_detuning
     
 
@@ -79,12 +79,16 @@ def bootstrap_frequency_scan(df_traj: pd.DataFrame, odepars, obe_system, exc, rh
     of from df_traj to get bootstrapped error bars.
     """
     df_bs = pd.DataFrame()
+    df_raw = pd.DataFrame()
 
     for n in tqdm(range(n_bs)):
         # Run simulation for ensemble of trajectories
         df_traj_ens = run_traj_ensemble_simulation(df_traj, odepars, obe_system, exc, rho, transition_name,
                                  laser_detunings=laser_detunings,
                                  n_traj = n_traj, save = False, pb = True)
+
+        # Append to dataframe that contains all trajectories and raw data for them
+        df_raw = pd.concat([df_raw, df_traj_ens])
 
         # Calculate mean number of photons for each frequency
         mean_photons = df_traj_ens.groupby('laser_detuning').mean().reset_index()
@@ -101,17 +105,21 @@ def bootstrap_frequency_scan(df_traj: pd.DataFrame, odepars, obe_system, exc, rh
     # Save data
     if save:
         time = pd.Timestamp.now().strftime('%Y-%m-%d_%H-%M-%S')
-        fname = f"./saved_data/{transition_name}_bs_n={n_traj}_{time}.csv"
+        fname = f"./saved_data/{transition_name}_bs_n_traj={n_traj}_n_bs={n_bs}_{time}.csv"
         with open(fname,'w+', encoding="utf-8") as f:
             f.write(odepars.__repr__()+'\n',)
             df_bs.to_csv(f, index=False)
 
-        fname = f"./saved_data/{transition_name}_bs_agg_n={n_traj}_{time}.csv"
+        fname = f"./saved_data/{transition_name}_bs_agg_n_traj={n_traj}_n_bs={n_bs}_{time}.csv"
         with open(fname,'w+', encoding="utf-8") as f:
             f.write(odepars.__repr__()+'\n',)
             df_agg.to_csv(f, index=False)
 
+        fname = f"./saved_data/{transition_name}_bs_raw_n_traj={n_traj}_n_bs={n_bs}_{time}.csv"
+        with open(fname,'w+', encoding="utf-8") as f:
+            f.write(odepars.__repr__()+'\n',)
+            df_raw.to_csv(f, index=False)
 
-    return df_agg, df_bs
+    return df_agg, df_bs, df_raw
     
 
