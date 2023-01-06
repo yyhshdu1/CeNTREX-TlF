@@ -21,6 +21,7 @@ from centrex_TlF.states.utils import (
     find_state_idx_from_state,
     find_states_idxs_from_states,
 )
+from scipy.constants import hbar
 from sympy import Rational
 
 __all__ = [
@@ -94,6 +95,36 @@ def calculate_energies(
     QN = list(QN_X) + list(QN_B)
 
     return QN, H_tot
+
+
+def calculate_state_energy(state, H, QN):
+    """
+    Function that calculates the energy of the given state.
+
+    inputs:
+    state       : State object or state vector (np.ndarray) representing the state of interest
+    H           : Hamiltonian that is used to calculate the energies of states 1 and 2
+                  (assumed to be in angular frequency units - 2pi*Hz)
+    QN          : List of State objects that defines the basis for the Hamiltonian
+
+    returns:
+    energy        : Energy of state in joules
+    """
+    # If provided with State objects, convert them to state vectors (np.ndarray)
+    if not isinstance(state, np.ndarray):
+        state1 = state.state_vector(QN)
+
+    # Diagonalize hamiltonian
+    D, V = np.linalg.eigh(H)
+
+    # Find the index that corresponds to the state
+    i = find_closest_vector_idx(state1, V)
+
+    # Find energy
+    E = D[i] * hbar
+
+    # Return state energy in J
+    return E
 
 
 def calculate_transition_frequency(state1, state2, H, QN):

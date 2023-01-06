@@ -104,7 +104,13 @@ class CoupledBasisState:
     def __repr__(self):
         return self.state_string()
 
-    def state_string(self):
+    def state_string(self, short = False):
+        """
+        Returns the ket for the state as a string.
+
+        inputs:
+        short : if True, omits, I1, I2, P and Omega
+        """
         F = sp.S(str(self.F), rational=True)
         mF = sp.S(str(self.mF), rational=True)
         F1 = sp.S(str(self.F1), rational=True)
@@ -121,10 +127,17 @@ class CoupledBasisState:
         Omega = self.Omega
         v = self.v
 
-        string = f"J = {J}, F₁ = {F1}, F = {F}, mF = {mF}, I₁ = {I1}, I₂ = {I2}"
+        string = f"J = {J}, F₁ = {F1}, F = {F}, mF = {mF}"
+        
+        if not short:
+           string += f", I₁ = {I1}, I₂ = {I2}"
 
         if electronic_state is not None:
             string = f"{electronic_state}, {string}"
+
+        if short:
+            return "|" + string + ">"
+        
         if P is not None:
             string = f"{string}, P = {P}"
         if Omega is not None:
@@ -190,6 +203,7 @@ class CoupledBasisState:
         electronic_state = self.electronic_state
         P = self.P
         Omega = self.Omega
+        S = 0
 
         # Check that not already in omega basis
         if P is not None and not electronic_state == "X":
@@ -216,7 +230,57 @@ class CoupledBasisState:
                 electronic_state=electronic_state,
             )
 
-            state = 1 / np.sqrt(2) * (state_plus + P * (-1) ** (J) * state_minus)
+            state = 1 / np.sqrt(2) * (state_plus + P * (-1) ** (J-S) * state_minus)
+        else:
+            state = 1 * self
+
+        return state
+
+    def transform_to_parity_basis(self):
+        """
+        Transforms self from Omega eigenstate basis (i.e. signed Omega) to 
+        parity eigenstate basis (unsigned Omega, P is good quantum number).
+
+        Doing this is only defined for electronic state B.
+        """
+        F = self.F
+        mF = self.mF
+        F1 = self.F1
+        J = self.J
+        I1 = self.I1
+        I2 = self.I2
+        electronic_state = self.electronic_state
+        P = self.P
+        Omega = self.Omega
+        S = 0
+
+        # Check that not already in parity basis
+        if P is None and not electronic_state == "X":
+            if np.sign(Omega) == 1:
+                state = (1/np.sqrt(2)
+                    *(  1*CoupledBasisState(
+                        F,mF,F1,J,I1,I2,Omega= np.abs(Omega),P=+1,
+                        electronic_state=electronic_state,
+                        )
+                    +   1*CoupledBasisState(
+                        F,mF,F1,J,I1,I2,Omega= np.abs(Omega),P=-1,
+                        electronic_state=electronic_state,
+                        )
+                    )
+                )
+                
+            elif np.sign(Omega) == -1:
+                state = (1/np.sqrt(2) * (-1)**(J-S)
+                    *(  1*CoupledBasisState(
+                        F,mF,F1,J,I1,I2,Omega= np.abs(Omega),P=+1,
+                        electronic_state=electronic_state,
+                        )
+                    -   1*CoupledBasisState(
+                        F,mF,F1,J,I1,I2,Omega= np.abs(Omega),P=-1,
+                        electronic_state=electronic_state,
+                        )
+                    )
+                )
         else:
             state = 1 * self
 
@@ -411,6 +475,7 @@ class UncoupledBasisState:
         electronic_state = self.electronic_state
         P = self.P
         Omega = self.Omega
+        S = 0
 
         # Check that not already in omega basis
         if P is not None and not electronic_state == "X":
@@ -437,7 +502,7 @@ class UncoupledBasisState:
                 electronic_state=electronic_state,
             )
 
-            state = 1 / np.sqrt(2) * (state_plus + P * (-1) ** (J - 1) * state_minus)
+            state = 1 / np.sqrt(2) * (state_plus + P * (-1) ** (J - S) * state_minus)
         else:
             state = 1 * self
 
@@ -760,3 +825,18 @@ class State:
         arg = np.arctan(np.imag(a) / np.real(a))
 
         return self * np.exp(-1j * arg * np.sign(np.imag(a)))
+
+    def print_ef_parity(self):
+        """
+        Prints the e/f parity of the state. Defined as:
+        e = parity == (-1)**J
+        f = parity == (-1)**(J+1)
+        """
+        J = self.find_largest_component().J
+        P = self.find_largest_component().P
+
+        if P == (-1)**J:
+            print("e")
+
+        if P == (-1)**(J+1):
+            print("f")

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import product
-from typing import SupportsFloat, Union
+from typing import List, SupportsFloat, Union
 
 import numpy as np
 from centrex_TlF.hamiltonian.utils import reorder_evecs
@@ -180,6 +180,13 @@ class QuantumSelector:
     def get_indices(self, QN, mode="python"):
         return get_indices_quantumnumbers_base(self, QN, mode)
 
+    def get_states(self, QN, mode="python"):
+        """
+        Returns the states in QN that fit the pattern specified in the QuantumSelector
+        """
+        indices = self.get_indices(QN)
+        return QN[indices]
+
 
 @dataclass
 class SystemParameters:
@@ -321,3 +328,68 @@ def get_unique_basisstates(states: Union[list, np.ndarray]) -> Union[list, np.nd
         states_unique = np.asarray(states_unique)
 
     return states_unique
+
+
+def matrix_to_states(V: np.ndarray, QN: List)-> List[State]:
+    """
+    Converts matrix of eigenvectors (each column a vector) to a list of states
+    in the basis defined by QN
+
+    Args:
+        V (np.ndarray)  :   numpy array to be converted to State-objects.
+                            Each column corresponds to a state vector.
+        QN (List)       :   List of BasisStates that defines the basis for
+                            the state vectors
+    Returns:
+        List[State]     :   List of States corresponding to columns of V    
+    """
+
+    #Find dimensions of matrix
+    matrix_dimensions = V.shape
+    
+    #Initialize a list for storing eigenstates
+    eigenstates = []
+    
+    for i in range(0,matrix_dimensions[1]):
+        #Find state vector
+        state_vector = V[:,i]
+
+        #Ensure that largest component has positive sign
+        index = np.argmax(np.abs(state_vector))
+        state_vector = state_vector * np.sign(state_vector[index])
+        
+        state = State()
+        
+        #Get data in correct format for initializing state object
+        for j, amp in enumerate(state_vector):
+            state += amp*QN[j]
+
+        #Store the state in the list
+        eigenstates.append(state)
+        
+    
+    #Return the list of states
+    return eigenstates
+
+def vector_to_state(state_vector: np.ndarray, QN: List) -> State:
+    """
+    Converts a state vector into a State in the basis defined by QN.
+
+    Args:
+        state_vector (np.ndarray):   
+            numpy array to be converted to State.
+        QN (List):
+            List of BasisStates that defines the basis for
+            the state vector
+    Returns:
+        State:
+            State corresponding to state vector       
+
+    """
+    state = State()
+    
+    #Get data in correct format for initializing state object
+    for j, amp in enumerate(state_vector):
+        state += amp*QN[j]
+        
+    return state
